@@ -1,4 +1,5 @@
 .App {
+  font-family: Arial, sans-serif;
   text-align: center;
 }
 
@@ -26,6 +27,171 @@
 
 .App-link {
   color: #61dafb;
+}
+
+.app-container {
+  max-width: 800px;
+  margin: 0 auto;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.app-header {
+  padding: 40px 20px 10px 20px;
+  border-bottom: 1px solid #eee;
+  position: relative;
+  min-height: 120px;
+}
+
+.header-content {
+  display: flex;
+  position: relative;
+  margin-top: 40px;
+  height: 80px;
+}
+
+.header-text {
+  text-align: left;
+  margin-left: 20px;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0;
+  text-align: left;
+  position: absolute;
+  top: 10px;
+  left: 20px;
+}
+
+.app-flag {
+  width: 120px;
+  height: auto;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 0;
+  margin-bottom: 20px;
+}
+
+.app-footer {
+  text-align: center;
+  padding: 10px;
+  font-size: 12px;
+  color: #666;
+  border-top: 1px solid #eee;
+}
+
+.login-form {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 20px;
+}
+
+.nav-menu {
+  background-color: #2196F3;
+  color: white;
+}
+
+.nav-menu .nav-link {
+  color: white;
+}
+
+.dropdown-menu {
+  background-color: #2196F3;
+}
+
+.dropdown-item {
+  color: white;
+}
+
+.dropdown-item:hover {
+  background-color: #1976D2;
+}
+
+.btn-logout {
+  background-color: #333;
+  color: white;
+}
+
+.form-container {
+  padding: 20px;
+}
+
+.select-with-icon {
+  background-color: #0d6efd;
+  color: white;
+  border-radius: 4px;
+  border: none;
+  height: 38px;
+}
+
+.select-with-icon option {
+  background-color: white;
+  color: black;
+}
+
+.btn-generate-plate {
+  background-color: #4caf50;
+  border-color: #4caf50;
+  color: white;
+}
+
+.btn-generate-qr {
+  background-color: #4caf50;
+  border-color: #4caf50;
+  color: white;
+}
+
+.plate-number-display {
+  background-color: white;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 6px 12px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.qr-code-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.form-label {
+  text-align: left;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.form-control {
+  margin-bottom: 15px;
+}
+
+.btn-generate {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.plate-number {
+  border: 1px solid #ddd;
+  padding: 5px;
+  margin-top: 10px;
+}
+
+.qr-code {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto;
+}
+
+.logo-small {
+  width: 50px;
+  height: auto;
+  margin: 10px auto;
+  display: block;
 }
 
 @keyframes App-logo-spin {
