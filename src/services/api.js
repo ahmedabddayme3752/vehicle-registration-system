@@ -33,7 +33,7 @@ class ApiService {
   }
 
   // Make HTTP request with auth headers
-  async makeRequest(endpoint, options = {}) {
+  async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const token = this.getAuthToken();
 
@@ -70,7 +70,7 @@ class ApiService {
 
   // Authentication methods
   async login(email, password) {
-    const data = await this.makeRequest('/auth/login', {
+    const data = await this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -84,7 +84,7 @@ class ApiService {
   }
 
   async register(username, email, password) {
-    const data = await this.makeRequest('/auth/register', {
+    const data = await this.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ username, email, password }),
     });
@@ -98,7 +98,7 @@ class ApiService {
   }
 
   async getCurrentUserProfile() {
-    return await this.makeRequest('/auth/me');
+    return await this.request('/auth/me');
   }
 
   logout() {
@@ -106,57 +106,43 @@ class ApiService {
     window.location.href = '/';
   }
 
-  // Plaque methods
+  // Plaque endpoints
   async getPlaques(params = {}) {
     const queryString = new URLSearchParams(params).toString();
-    return this.makeRequest(queryString ? `/vehicles?${queryString}` : '/vehicles');
+    const response = await this.request(queryString ? `/plaques?${queryString}` : '/plaques');
+    return response;
   }
 
   async getPlaqueById(id) {
-    return this.makeRequest(`/vehicles/${id}`);
+    return this.request(`/plaques/${id}`);
   }
 
   async getPlaqueByPlateNumber(plateNumber) {
-    return this.makeRequest(`/vehicles/plate/${plateNumber}`);
+    return this.request(`/plaques/plate/${plateNumber}`);
   }
 
   async createPlaque(plaqueData) {
-    return this.makeRequest('/vehicles', {
+    return this.request('/plaques', {
       method: 'POST',
-      body: JSON.stringify(plaqueData),
+      body: JSON.stringify(plaqueData)
     });
-  }
-
-  // Legacy method names for backward compatibility
-  async createVehicle(vehicleData) {
-    return this.createPlaque(vehicleData);
   }
 
   async updatePlaque(id, plaqueData) {
-    return this.makeRequest(`/vehicles/${id}`, {
+    return this.request(`/plaques/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(plaqueData),
+      body: JSON.stringify(plaqueData)
     });
-  }
-
-  // Legacy method names for backward compatibility
-  async updateVehicle(id, vehicleData) {
-    return this.updatePlaque(id, vehicleData);
   }
 
   async deletePlaque(id) {
-    return this.makeRequest(`/vehicles/${id}`, {
-      method: 'DELETE',
+    return this.request(`/plaques/${id}`, {
+      method: 'DELETE'
     });
   }
 
-  // Legacy method names for backward compatibility
-  async deleteVehicle(id) {
-    return this.deletePlaque(id);
-  }
-
   async getPlaqueStats() {
-    return this.makeRequest('/vehicles/stats/overview');
+    return this.request('/plaques/stats/overview');
   }
 
   // Legacy method names for backward compatibility

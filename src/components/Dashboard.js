@@ -187,8 +187,7 @@ const Dashboard = () => {
                       <tr>
                         <th>Plaque</th>
                         <th>Propriétaire</th>
-                        <th>Marque</th>
-                        <th>Modèle</th>
+                        <th>Email</th>
                         <th>Statut</th>
                         <th>Date d'expiration</th>
                       </tr>
@@ -200,8 +199,7 @@ const Dashboard = () => {
                             <strong>{plaque.plate_number}</strong>
                           </td>
                           <td>{plaque.owner_name}</td>
-                          <td>{plaque.plaque_make || plaque.vehicle_make}</td>
-                          <td>{plaque.plaque_model || plaque.vehicle_model}</td>
+                          <td>{plaque.owner_email}</td>
                           <td>{getStatusBadge(plaque.status)}</td>
                           <td>{formatDate(plaque.expiry_date)}</td>
                         </tr>

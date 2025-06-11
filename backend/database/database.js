@@ -36,22 +36,17 @@ class Database {
         )
       `;
 
-      // Plaques table
+      // Plaques table - completely fresh schema
       const createPlaquesTable = `
         CREATE TABLE IF NOT EXISTS plaques (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          plate_number TEXT UNIQUE NOT NULL,
-          owner_name TEXT NOT NULL,
-          owner_email TEXT NOT NULL,
-          owner_phone TEXT NOT NULL,
-          plaque_type TEXT NOT NULL,
-          plaque_make TEXT NOT NULL,
-          plaque_model TEXT NOT NULL,
-          plaque_year INTEGER NOT NULL,
-          plaque_color TEXT NOT NULL,
+          plate_number VARCHAR(50) UNIQUE NOT NULL,
+          owner_name VARCHAR(255) NOT NULL,
+          owner_email VARCHAR(255) NOT NULL,
+          owner_phone VARCHAR(50),
           registration_date DATETIME DEFAULT CURRENT_TIMESTAMP,
           expiry_date DATETIME NOT NULL,
-          status TEXT DEFAULT 'active',
+          status VARCHAR(20) DEFAULT 'active',
           created_by INTEGER,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -59,10 +54,11 @@ class Database {
         )
       `;
 
-      // Drop old legacy vehicles table if it exists
-      const dropLegacyVehiclesTable = `
-        DROP TABLE IF EXISTS vehicles
-      `;
+      // Drop ALL old tables to start completely fresh
+      const dropAllOldTables = [
+        'DROP TABLE IF EXISTS vehicles',
+        'DROP TABLE IF EXISTS plaques'
+      ];
 
       // Create default admin user
       const createDefaultAdmin = `
@@ -71,13 +67,13 @@ class Database {
       `;
 
       this.db.serialize(() => {
-        // First drop the old vehicles table if it exists
-        this.db.run(dropLegacyVehiclesTable, (err) => {
-          if (err && !err.message.includes('no such table')) {
-            console.error('Error dropping legacy vehicles table:', err);
-          } else {
-            console.log('Legacy vehicles table removed (if it existed)');
-          }
+        // Drop all old tables first
+        dropAllOldTables.forEach(dropQuery => {
+          this.db.run(dropQuery, (err) => {
+            if (err && !err.message.includes('no such table')) {
+              console.error('Error dropping table:', err);
+            }
+          });
         });
 
         this.db.run(createUsersTable, (err) => {
@@ -86,6 +82,7 @@ class Database {
             reject(err);
             return;
           }
+          console.log('✓ Users table ready');
         });
 
         this.db.run(createPlaquesTable, (err) => {
@@ -94,6 +91,7 @@ class Database {
             reject(err);
             return;
           }
+          console.log('✓ Plaques table ready (fresh schema)');
         });
 
         this.db.run(createDefaultAdmin, (err) => {
@@ -102,7 +100,8 @@ class Database {
             reject(err);
             return;
           }
-          console.log('Database tables initialized successfully with fresh plaques table');
+          console.log('✓ Default admin user ready');
+          console.log('🎯 Database initialized with clean person registration schema');
           resolve();
         });
       });

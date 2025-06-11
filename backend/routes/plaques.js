@@ -4,72 +4,74 @@ const router = express.Router();
 const database = require('../database/database');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
-// @route   GET /api/vehicles
+// @route   GET /api/plaques
 // @desc    Get all plaques
 // @access  Private
-router.get('/', authMiddleware, (req, res) => {
-  const db = database.getDb();
-  const { page = 1, limit = 10, search = '', status = '' } = req.query;
-  const offset = (page - 1) * limit;
+router.get('/', authMiddleware, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || '';
+    const status = req.query.status || '';
 
-  let query = 'SELECT * FROM plaques WHERE 1=1';
-  let params = [];
+    let whereClause = '';
+    let params = [];
 
-  if (search) {
-    query += ' AND (plate_number LIKE ? OR owner_name LIKE ? OR plaque_make LIKE ? OR plaque_model LIKE ?)';
-    const searchParam = `%${search}%`;
-    params.push(searchParam, searchParam, searchParam, searchParam);
-  }
-
-  if (status) {
-    query += ' AND status = ?';
-    params.push(status);
-  }
-
-  query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-  params.push(parseInt(limit), parseInt(offset));
-
-  db.all(query, params, (err, vehicles) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: 'Server error' });
-    }
-
-    // Get total count for pagination
-    let countQuery = 'SELECT COUNT(*) as total FROM plaques WHERE 1=1';
-    let countParams = [];
-
+    // Build search conditions
     if (search) {
-      countQuery += ' AND (plate_number LIKE ? OR owner_name LIKE ? OR plaque_make LIKE ? OR plaque_model LIKE ?)';
-      const searchParam = `%${search}%`;
-      countParams.push(searchParam, searchParam, searchParam, searchParam);
+      whereClause += ' WHERE (plate_number LIKE ? OR owner_name LIKE ? OR owner_email LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     if (status) {
-      countQuery += ' AND status = ?';
-      countParams.push(status);
+      whereClause += search ? ' AND status = ?' : ' WHERE status = ?';
+      params.push(status);
     }
 
-    db.get(countQuery, countParams, (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ message: 'Server error' });
-      }
+    const db = database.getDb();
 
-      res.json({
-        vehicles,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total: result.total,
-          totalPages: Math.ceil(result.total / limit)
-        }
+    // Get total count
+    const countQuery = `SELECT COUNT(*) as total FROM plaques${whereClause}`;
+    const totalResult = await new Promise((resolve, reject) => {
+      db.get(countQuery, params, (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
       });
     });
-  });
+
+    // Get plaques
+    const query = `
+      SELECT id, plate_number, owner_name, owner_email, owner_phone,
+             registration_date, expiry_date, status, created_at
+      FROM plaques${whereClause}
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+    
+    const plaques = await new Promise((resolve, reject) => {
+      db.all(query, [...params, limit, offset], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+
+    res.json({
+      plaques,
+      pagination: {
+        page,
+        limit,
+        total: totalResult.total,
+        totalPages: Math.ceil(totalResult.total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching plaques:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des plaques' });
+  }
 });
 
-// @route   GET /api/vehicles/:id
+// @route   GET /api/plaques/:id
 // @desc    Get plaque by ID
 // @access  Private
 router.get('/:id', authMiddleware, (req, res) => {
@@ -90,7 +92,7 @@ router.get('/:id', authMiddleware, (req, res) => {
   });
 });
 
-// @route   GET /api/vehicles/plate/:plateNumber
+// @route   GET /api/plaques/plate/:plateNumber
 // @desc    Get plaque by plate number
 // @access  Private
 router.get('/plate/:plateNumber', authMiddleware, (req, res) => {
@@ -111,178 +113,157 @@ router.get('/plate/:plateNumber', authMiddleware, (req, res) => {
   });
 });
 
-// @route   POST /api/vehicles
+// @route   POST /api/plaques
 // @desc    Register a new plaque
 // @access  Private
-router.post('/', [
-  authMiddleware,
-  body('plateNumber').trim().notEmpty().withMessage('Plate number is required'),
-  body('ownerName').trim().notEmpty().withMessage('Owner name is required'),
-  body('ownerEmail').isEmail().withMessage('Valid owner email is required'),
-  body('ownerPhone').trim().notEmpty().withMessage('Owner phone is required'),
-  body('vehicleType').trim().notEmpty().withMessage('Plaque type is required'),
-  body('vehicleMake').trim().notEmpty().withMessage('Plaque make is required'),
-  body('vehicleModel').trim().notEmpty().withMessage('Plaque model is required'),
-  body('vehicleYear').isInt({ min: 1900, max: new Date().getFullYear() + 1 }).withMessage('Valid plaque year is required'),
-  body('vehicleColor').trim().notEmpty().withMessage('Plaque color is required'),
-  body('expiryDate').isISO8601().withMessage('Valid expiry date is required')
-], (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
+router.post('/', authMiddleware, async (req, res) => {
+  try {
+    const { plateNumber, ownerName, ownerEmail, ownerPhone, expiryDate } = req.body;
 
-  const {
-    plateNumber,
-    ownerName,
-    ownerEmail,
-    ownerPhone,
-    vehicleType,
-    vehicleMake,
-    vehicleModel,
-    vehicleYear,
-    vehicleColor,
-    expiryDate
-  } = req.body;
-
-  const db = database.getDb();
-
-  // Check if plate number already exists
-  db.get('SELECT * FROM plaques WHERE plate_number = ?', [plateNumber], (err, existingVehicle) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: 'Server error' });
+    // Validate required fields
+    if (!plateNumber || !ownerName || !ownerEmail) {
+      return res.status(400).json({ 
+        message: 'Numéro de plaque, nom du propriétaire et email sont requis' 
+      });
     }
 
-    if (existingVehicle) {
-      return res.status(400).json({ message: 'Plaque with this plate number already exists' });
+    const db = database.getDb();
+
+    // Check if plate number already exists
+    const existingPlaque = await new Promise((resolve, reject) => {
+      db.get(
+        'SELECT id FROM plaques WHERE plate_number = ?',
+        [plateNumber],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+
+    if (existingPlaque) {
+      return res.status(400).json({ 
+        message: 'Ce numéro de plaque existe déjà' 
+      });
     }
 
     // Insert new plaque
-    const query = `
-      INSERT INTO plaques (
-        plate_number, owner_name, owner_email, owner_phone,
-        plaque_type, plaque_make, plaque_model, plaque_year,
-        plaque_color, expiry_date, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    db.run(
-      query,
-      [
-        plateNumber, ownerName, ownerEmail, ownerPhone,
-        vehicleType, vehicleMake, vehicleModel, vehicleYear,
-        vehicleColor, expiryDate, req.user.id
-      ],
-      function(err) {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ message: 'Server error' });
+    const result = await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO plaques (
+          plate_number, owner_name, owner_email, owner_phone,
+          registration_date, expiry_date, status, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          plateNumber,
+          ownerName,
+          ownerEmail,
+          ownerPhone || null,
+          new Date().toISOString(),
+          expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          'active',
+          req.user.id
+        ],
+        function(err) {
+          if (err) reject(err);
+          else resolve({ id: this.lastID });
         }
+      );
+    });
 
-        // Get the created plaque
-        db.get('SELECT * FROM plaques WHERE id = ?', [this.lastID], (err, vehicle) => {
-          if (err) {
-            console.error(err);
-            return res.status(500).json({ message: 'Server error' });
-          }
-
-          res.status(201).json({
-            message: 'Plaque registered successfully',
-            vehicle
-          });
-        });
+    res.status(201).json({
+      message: 'Plaque créée avec succès',
+      plaque: {
+        id: result.id,
+        plate_number: plateNumber,
+        owner_name: ownerName,
+        owner_email: ownerEmail,
+        owner_phone: ownerPhone,
+        status: 'active'
       }
-    );
-  });
+    });
+  } catch (error) {
+    console.error('Error creating plaque:', error);
+    res.status(500).json({ message: 'Erreur lors de la création de la plaque' });
+  }
 });
 
-// @route   PUT /api/vehicles/:id
+// @route   PUT /api/plaques/:id
 // @desc    Update plaque
 // @access  Private
-router.put('/:id', [
-  authMiddleware,
-  body('plateNumber').optional().trim().notEmpty().withMessage('Plate number cannot be empty'),
-  body('ownerName').optional().trim().notEmpty().withMessage('Owner name cannot be empty'),
-  body('ownerEmail').optional().isEmail().withMessage('Valid owner email is required'),
-  body('ownerPhone').optional().trim().notEmpty().withMessage('Owner phone cannot be empty'),
-  body('vehicleType').optional().trim().notEmpty().withMessage('Plaque type cannot be empty'),
-  body('vehicleMake').optional().trim().notEmpty().withMessage('Plaque make cannot be empty'),
-  body('vehicleModel').optional().trim().notEmpty().withMessage('Plaque model cannot be empty'),
-  body('vehicleYear').optional().isInt({ min: 1900, max: new Date().getFullYear() + 1 }).withMessage('Valid plaque year is required'),
-  body('vehicleColor').optional().trim().notEmpty().withMessage('Plaque color cannot be empty'),
-  body('expiryDate').optional().isISO8601().withMessage('Valid expiry date is required'),
-  body('status').optional().isIn(['active', 'expired', 'suspended']).withMessage('Status must be active, expired, or suspended')
-], (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
+router.put('/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { plateNumber, ownerName, ownerEmail, ownerPhone, expiryDate } = req.body;
 
-  const { id } = req.params;
-  const updateFields = req.body;
-  const db = database.getDb();
-
-  // Check if plaque exists
-  db.get('SELECT * FROM plaques WHERE id = ?', [id], (err, vehicle) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: 'Server error' });
+    // Validate required fields
+    if (!plateNumber || !ownerName || !ownerEmail) {
+      return res.status(400).json({ 
+        message: 'Numéro de plaque, nom du propriétaire et email sont requis' 
+      });
     }
 
-    if (!vehicle) {
-      return res.status(404).json({ message: 'Plaque not found' });
-    }
+    const db = database.getDb();
 
-    // Build update query dynamically
-    const fields = [];
-    const values = [];
-
-    Object.keys(updateFields).forEach(key => {
-      if (updateFields[key] !== undefined) {
-        // Convert camelCase to snake_case for database fields
-        let dbField = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-        // Map vehicle_* fields to plaque_* fields
-        if (dbField.startsWith('vehicle_')) {
-          dbField = dbField.replace('vehicle_', 'plaque_');
-        }
-        fields.push(`${dbField} = ?`);
-        values.push(updateFields[key]);
-      }
-    });
-
-    if (fields.length === 0) {
-      return res.status(400).json({ message: 'No fields to update' });
-    }
-
-    fields.push('updated_at = CURRENT_TIMESTAMP');
-    values.push(id);
-
-    const query = `UPDATE plaques SET ${fields.join(', ')} WHERE id = ?`;
-
-    db.run(query, values, function(err) {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ message: 'Server error' });
-      }
-
-      // Get updated plaque
-      db.get('SELECT * FROM plaques WHERE id = ?', [id], (err, updatedVehicle) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ message: 'Server error' });
-        }
-
-        res.json({
-          message: 'Plaque updated successfully',
-          vehicle: updatedVehicle
-        });
+    // Check if plaque exists
+    const existingPlaque = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM plaques WHERE id = ?', [id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
       });
     });
-  });
+
+    if (!existingPlaque) {
+      return res.status(404).json({ message: 'Plaque non trouvée' });
+    }
+
+    // Check if new plate number conflicts with another plaque
+    if (plateNumber !== existingPlaque.plate_number) {
+      const conflictPlaque = await new Promise((resolve, reject) => {
+        db.get('SELECT id FROM plaques WHERE plate_number = ? AND id != ?', [plateNumber, id], (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        });
+      });
+
+      if (conflictPlaque) {
+        return res.status(400).json({ message: 'Ce numéro de plaque existe déjà' });
+      }
+    }
+
+    // Update plaque
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE plaques SET 
+         plate_number = ?, owner_name = ?, owner_email = ?, owner_phone = ?, expiry_date = ?
+         WHERE id = ?`,
+        [plateNumber, ownerName, ownerEmail, ownerPhone, expiryDate, id],
+        function(err) {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+
+    // Get updated plaque
+    const updatedPlaque = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM plaques WHERE id = ?', [id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+
+    res.json({
+      message: 'Plaque mise à jour avec succès',
+      plaque: updatedPlaque
+    });
+  } catch (error) {
+    console.error('Error updating plaque:', error);
+    res.status(500).json({ message: 'Erreur lors de la mise à jour de la plaque' });
+  }
 });
 
-// @route   DELETE /api/vehicles/:id
+// @route   DELETE /api/plaques/:id
 // @desc    Delete plaque
 // @access  Private (Admin only)
 router.delete('/:id', [authMiddleware, adminMiddleware], (req, res) => {
@@ -310,7 +291,7 @@ router.delete('/:id', [authMiddleware, adminMiddleware], (req, res) => {
   });
 });
 
-// @route   GET /api/vehicles/stats/overview
+// @route   GET /api/plaques/stats/overview
 // @desc    Get plaque statistics
 // @access  Private
 router.get('/stats/overview', authMiddleware, (req, res) => {

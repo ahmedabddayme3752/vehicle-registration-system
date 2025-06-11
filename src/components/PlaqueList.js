@@ -105,6 +105,12 @@ const PlaqueList = () => {
     setPlaqueToDelete(null);
   };
 
+  const handleEdit = (plaque) => {
+    // For now, navigate to add-plate with edit mode
+    // In a full implementation, you'd create a separate edit page
+    navigate('/add-plate', { state: { editMode: true, plaqueData: plaque } });
+  };
+
   const handleLogout = () => {
     ApiService.logout();
   };
@@ -308,9 +314,8 @@ const PlaqueList = () => {
                 <tr>
                   <th>Plaque</th>
                   <th>Propriétaire</th>
-                  <th>Plaque Info</th>
-                  <th>Type</th>
-                  <th>Couleur</th>
+                  <th>Téléphone</th>
+                  <th>Email</th>
                   <th>Statut</th>
                   <th>Expiration</th>
                   <th>Actions</th>
@@ -332,13 +337,8 @@ const PlaqueList = () => {
                         <small className="text-muted">{plaque.owner_email}</small>
                       </div>
                     </td>
-                    <td>
-                      {plaque.plaque_make || plaque.vehicle_make} {plaque.plaque_model || plaque.vehicle_model}
-                      <br />
-                      <small className="text-muted">{plaque.plaque_year || plaque.vehicle_year}</small>
-                    </td>
-                    <td>{plaque.plaque_type || plaque.vehicle_type}</td>
-                    <td>{plaque.plaque_color || plaque.vehicle_color}</td>
+                    <td>{plaque.owner_phone}</td>
+                    <td>{plaque.owner_email}</td>
                     <td>{getStatusBadge(plaque.status)}</td>
                     <td>
                       {formatDate(plaque.expiry_date)}
@@ -359,6 +359,7 @@ const PlaqueList = () => {
                           size="sm"
                           variant="outline-warning"
                           title="Modifier"
+                          onClick={() => handleEdit(plaque)}
                         >
                           ✏️
                         </Button>
@@ -410,7 +411,8 @@ const PlaqueList = () => {
               <div className="bg-light p-3 rounded">
                 <strong>Plaque:</strong> {plaqueToDelete.plate_number}<br />
                 <strong>Propriétaire:</strong> {plaqueToDelete.owner_name}<br />
-                <strong>Plaque:</strong> {plaqueToDelete.plaque_make || plaqueToDelete.vehicle_make} {plaqueToDelete.plaque_model || plaqueToDelete.vehicle_model}
+                <strong>Email:</strong> {plaqueToDelete.owner_email}<br />
+                <strong>Téléphone:</strong> {plaqueToDelete.owner_phone}
               </div>
               <p className="text-danger mt-2">
                 <small>⚠️ Cette action est irréversible.</small>

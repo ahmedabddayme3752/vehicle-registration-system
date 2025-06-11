@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Container, Form, Button, Row, Col, Navbar, Nav, NavDropdown, Alert, Spinner, Modal } from 'react-bootstrap';
 import { QRCodeSVG } from 'qrcode.react';
 import ApiService from '../services/api';
 
 const AddPlate = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showQR, setShowQR] = useState(false);
+
+  // Check if we're in edit mode
+  const editMode = location.state?.editMode || false;
+  const existingPlaque = location.state?.plaqueData || null;
 
   const [formData, setFormData] = useState({
     nom: '',
@@ -20,15 +25,11 @@ const AddPlate = () => {
     secteur: '',
     village: '',
     province: '',
+    provinceCode: '10',
     nationalite: '',
     adresse: '',
     telephone: '',
-    email: '',
-    vehicleType: '',
-    vehicleMake: '',
-    vehicleModel: '',
-    vehicleYear: '',
-    vehicleColor: ''
+    email: ''
   });
   
   const [plateNumber, setPlateNumber] = useState('');
@@ -40,7 +41,28 @@ const AddPlate = () => {
       navigate('/');
       return;
     }
-  }, [navigate]);
+
+    // If in edit mode, pre-fill the form with existing data
+    if (editMode && existingPlaque) {
+      const ownerNameParts = existingPlaque.owner_name?.split(' ') || ['', '', ''];
+      setFormData({
+        nom: ownerNameParts[0] || '',
+        postNom: ownerNameParts[1] || '',
+        prenom: ownerNameParts[2] || '',
+        district: '',
+        territoire: '',
+        secteur: '',
+        village: '',
+        province: '',
+        provinceCode: '10',
+        nationalite: '',
+        adresse: '',
+        telephone: existingPlaque.owner_phone || '',
+        email: existingPlaque.owner_email || ''
+      });
+      setPlateNumber(existingPlaque.plate_number || '');
+    }
+  }, [navigate, editMode, existingPlaque]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,10 +73,9 @@ const AddPlate = () => {
   };
 
   const handleGeneratePlate = () => {
-    // Generate a unique plate number
-    const timestamp = Date.now().toString().slice(-6);
-    const randomNum = Math.floor(Math.random() * 900) + 100;
-    const newPlateNumber = `${randomNum}/${timestamp.slice(0,2)}/${timestamp.slice(2,3)}`;
+    // Generate simple number like the old format
+    const randomNum = Math.floor(Math.random() * 900000) + 100000; // 6 digits
+    const newPlateNumber = randomNum.toString();
     setPlateNumber(newPlateNumber);
     setQrCodeValue('');
   };
@@ -76,11 +97,6 @@ const AddPlate = () => {
         adresse: formData.adresse,
         telephone: formData.telephone,
         email: formData.email,
-        vehicleType: formData.vehicleType,
-        vehicleMake: formData.vehicleMake,
-        vehicleModel: formData.vehicleModel,
-        vehicleYear: formData.vehicleYear,
-        vehicleColor: formData.vehicleColor,
         dateEnregistrement: new Date().toLocaleDateString('fr-FR')
       };
 
@@ -94,21 +110,24 @@ const AddPlate = () => {
           ownerName: formData.nom + ' ' + formData.postNom + ' ' + formData.prenom,
           ownerEmail: formData.email,
           ownerPhone: formData.telephone,
-          vehicleType: formData.vehicleType || 'Automobile',
-          vehicleMake: formData.vehicleMake || 'Toyota',
-          vehicleModel: formData.vehicleModel || 'Corolla',
-          vehicleYear: formData.vehicleYear || new Date().getFullYear(),
-          vehicleColor: formData.vehicleColor || 'Blanc',
           expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year from now
         };
 
-        const response = await ApiService.createPlaque(plaqueData);
+        let response;
+        if (editMode && existingPlaque) {
+          // Update existing plaque
+          response = await ApiService.updatePlaque(existingPlaque.id, plaqueData);
+          setSuccess('Plaque mise à jour avec succès!');
+        } else {
+          // Create new plaque
+          response = await ApiService.createPlaque(plaqueData);
+          setSuccess('Plaque enregistrée avec succès!');
+        }
         
         // Generate QR code with ALL the form data
         setQrCodeValue(JSON.stringify(completeData));
-        setSuccess('Plaque enregistrée avec succès!');
       } catch (err) {
-        setError(err.message || 'Erreur lors de l\'enregistrement de la plaque');
+        setError(err.message || `Erreur lors de ${editMode ? 'la mise à jour' : 'l\'enregistrement'} de la plaque`);
       } finally {
         setLoading(false);
       }
@@ -121,9 +140,8 @@ const AddPlate = () => {
   const isFormComplete = () => {
     const requiredFields = [
       'nom', 'postNom', 'prenom', 'district', 'territoire', 
-      'secteur', 'village', 'province', 'nationalite', 
-      'adresse', 'telephone', 'email', 'vehicleType', 
-      'vehicleMake', 'vehicleModel', 'vehicleYear', 'vehicleColor'
+      'secteur', 'village', 'province', 'provinceCode', 'nationalite', 
+      'adresse', 'telephone', 'email'
     ];
     
     return requiredFields.every(field => formData[field] && formData[field].trim() !== '') && plateNumber;
@@ -170,7 +188,9 @@ const AddPlate = () => {
             <Nav className="me-auto">
               <Nav.Link onClick={handleBack}>Accueil</Nav.Link>
               <NavDropdown title="Plaques" id="basic-nav-dropdown">
-                <NavDropdown.Item as={Link} to="/add-plate" className="active">Ajouter</NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/add-plate" className="active">
+                  {editMode ? 'Modifier' : 'Ajouter'}
+                </NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/plaques">Consulter</NavDropdown.Item>
                 <NavDropdown.Divider />
                 <NavDropdown.Item href="#plaques/search">Modifier</NavDropdown.Item>
@@ -340,6 +360,48 @@ const AddPlate = () => {
 
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
+              <Form.Label>Code Province</Form.Label>
+            </Col>
+            <Col xs={9}>
+              <Form.Select 
+                name="provinceCode" 
+                value={formData.provinceCode}
+                onChange={handleChange}
+                className="select-with-icon"
+                disabled={loading}
+              >
+                <option value="01">01 - Kinshasa</option>
+                <option value="02">02 - Bas-Uele</option>
+                <option value="03">03 - Équateur</option>
+                <option value="04">04 - Haut-Katanga</option>
+                <option value="05">05 - Haut-Lomami</option>
+                <option value="06">06 - Haut-Uele</option>
+                <option value="07">07 - Ituri</option>
+                <option value="08">08 - Kasaï</option>
+                <option value="09">09 - Kasaï-Oriental</option>
+                <option value="10">10 - Kongo Central</option>
+                <option value="11">11 - Kwango</option>
+                <option value="12">12 - Kwilu</option>
+                <option value="13">13 - Lomami</option>
+                <option value="14">14 - Lualaba</option>
+                <option value="15">15 - Kasaï-Central</option>
+                <option value="16">16 - Mai-Ndombe</option>
+                <option value="17">17 - Maniema</option>
+                <option value="18">18 - Mongala</option>
+                <option value="19">19 - Nord-Kivu</option>
+                <option value="20">20 - Nord-Ubangi</option>
+                <option value="21">21 - Sankuru</option>
+                <option value="22">22 - Sud-Kivu</option>
+                <option value="23">23 - Sud-Ubangi</option>
+                <option value="24">24 - Tanganyika</option>
+                <option value="25">25 - Tshopo</option>
+                <option value="26">26 - Tshuapa</option>
+              </Form.Select>
+            </Col>
+          </Row>
+
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
               <Form.Label>Nationalité</Form.Label>
             </Col>
             <Col xs={9}>
@@ -407,136 +469,6 @@ const AddPlate = () => {
 
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
-              <Form.Label>Type de véhicule</Form.Label>
-            </Col>
-            <Col xs={9}>
-              <Form.Select 
-                name="vehicleType" 
-                value={formData.vehicleType}
-                onChange={handleChange}
-                className="select-with-icon"
-                disabled={loading}
-              >
-                <option>Sélectionner le type de véhicule</option>
-                <option value="Automobile">Automobile</option>
-                <option value="SUV">SUV</option>
-                <option value="Pick-up">Pick-up</option>
-                <option value="Camion">Camion</option>
-                <option value="Camionnette">Camionnette</option>
-                <option value="Bus">Bus</option>
-                <option value="Minibus">Minibus</option>
-                <option value="Moto">Moto</option>
-                <option value="Scooter">Scooter</option>
-                <option value="Tricycle">Tricycle</option>
-                <option value="Autre">Autre</option>
-              </Form.Select>
-            </Col>
-          </Row>
-
-          <Row className="mb-3">
-            <Col xs={3} className="text-end pt-2">
-              <Form.Label>Marque</Form.Label>
-            </Col>
-            <Col xs={9}>
-              <Form.Select 
-                name="vehicleMake" 
-                value={formData.vehicleMake}
-                onChange={handleChange}
-                className="select-with-icon"
-                disabled={loading}
-              >
-                <option>Sélectionner la marque</option>
-                <option value="Toyota">Toyota</option>
-                <option value="Honda">Honda</option>
-                <option value="Nissan">Nissan</option>
-                <option value="Hyundai">Hyundai</option>
-                <option value="Kia">Kia</option>
-                <option value="Mazda">Mazda</option>
-                <option value="Mitsubishi">Mitsubishi</option>
-                <option value="Ford">Ford</option>
-                <option value="Chevrolet">Chevrolet</option>
-                <option value="Peugeot">Peugeot</option>
-                <option value="Renault">Renault</option>
-                <option value="Volkswagen">Volkswagen</option>
-                <option value="Mercedes-Benz">Mercedes-Benz</option>
-                <option value="BMW">BMW</option>
-                <option value="Audi">Audi</option>
-                <option value="Autre">Autre</option>
-              </Form.Select>
-            </Col>
-          </Row>
-
-          <Row className="mb-3">
-            <Col xs={3} className="text-end pt-2">
-              <Form.Label>Modèle</Form.Label>
-            </Col>
-            <Col xs={9}>
-              <Form.Control 
-                type="text" 
-                name="vehicleModel" 
-                value={formData.vehicleModel}
-                onChange={handleChange}
-                placeholder="Ex: Corolla, Civic, Sentra..."
-                disabled={loading}
-              />
-            </Col>
-          </Row>
-
-          <Row className="mb-3">
-            <Col xs={3} className="text-end pt-2">
-              <Form.Label>Année</Form.Label>
-            </Col>
-            <Col xs={9}>
-              <Form.Select 
-                name="vehicleYear" 
-                value={formData.vehicleYear}
-                onChange={handleChange}
-                className="select-with-icon"
-                disabled={loading}
-              >
-                <option>Sélectionner l'année</option>
-                {Array.from({length: 30}, (_, i) => {
-                  const year = new Date().getFullYear() - i;
-                  return <option key={year} value={year}>{year}</option>;
-                })}
-              </Form.Select>
-            </Col>
-          </Row>
-
-          <Row className="mb-3">
-            <Col xs={3} className="text-end pt-2">
-              <Form.Label>Couleur</Form.Label>
-            </Col>
-            <Col xs={9}>
-              <Form.Select 
-                name="vehicleColor" 
-                value={formData.vehicleColor}
-                onChange={handleChange}
-                className="select-with-icon"
-                disabled={loading}
-              >
-                <option>Sélectionner la couleur</option>
-                <option value="Blanc">Blanc</option>
-                <option value="Noir">Noir</option>
-                <option value="Gris">Gris</option>
-                <option value="Argent">Argent</option>
-                <option value="Rouge">Rouge</option>
-                <option value="Bleu">Bleu</option>
-                <option value="Vert">Vert</option>
-                <option value="Jaune">Jaune</option>
-                <option value="Orange">Orange</option>
-                <option value="Marron">Marron</option>
-                <option value="Violet">Violet</option>
-                <option value="Rose">Rose</option>
-                <option value="Beige">Beige</option>
-                <option value="Doré">Doré</option>
-                <option value="Autre">Autre</option>
-              </Form.Select>
-            </Col>
-          </Row>
-
-          <Row className="mb-3">
-            <Col xs={3} className="text-end pt-2">
               <Form.Label>Numéro de plaque</Form.Label>
             </Col>
             <Col xs={4}>
@@ -559,10 +491,10 @@ const AddPlate = () => {
                 {loading ? (
                   <>
                     <Spinner as="span" animation="border" size="sm" className="me-2" />
-                    Génération...
+                    {editMode ? 'Mise à jour...' : 'Génération...'}
                   </>
                 ) : (
-                  'Générer le code-barre'
+                  editMode ? 'Mettre à jour et générer QR' : 'Générer le code-barre'
                 )}
               </Button>
             </Col>

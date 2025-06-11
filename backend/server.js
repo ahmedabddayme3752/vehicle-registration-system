@@ -38,7 +38,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/vehicles', plaqueRoutes);
+app.use('/api/plaques', plaqueRoutes);
 
 // 404 handler for API routes
 app.use('/api/*', (req, res) => {
@@ -71,12 +71,12 @@ async function startServer() {
       console.log(`   POST /api/auth/login - User login`);
       console.log(`   POST /api/auth/register - User registration`);
       console.log(`   GET  /api/auth/me - Get current user`);
-      console.log(`   GET  /api/vehicles - Get all plaques`);
-      console.log(`   POST /api/vehicles - Register new plaque`);
-      console.log(`   GET  /api/vehicles/:id - Get plaque by ID`);
-      console.log(`   PUT  /api/vehicles/:id - Update plaque`);
-      console.log(`   DELETE /api/vehicles/:id - Delete plaque (admin only)`);
-      console.log(`   GET  /api/vehicles/stats/overview - Get statistics`);
+      console.log(`   GET  /api/plaques - Get all plaques`);
+      console.log(`   POST /api/plaques - Register new plaque`);
+      console.log(`   GET  /api/plaques/:id - Get plaque by ID`);
+      console.log(`   PUT  /api/plaques/:id - Update plaque`);
+      console.log(`   DELETE /api/plaques/:id - Delete plaque (admin only)`);
+      console.log(`   GET  /api/plaques/stats/overview - Get statistics`);
       console.log(`\n📝 Default admin credentials:`);
       console.log(`   Email: admin@example.com`);
       console.log(`   Password: password`);
