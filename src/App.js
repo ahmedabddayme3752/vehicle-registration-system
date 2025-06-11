@@ -5,7 +5,7 @@ import './App.css';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AddPlate from './components/AddPlate';
-import VehicleList from './components/VehicleList';
+import PlaqueList from './components/PlaqueList';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -31,10 +31,19 @@ function App() {
             } 
           />
           <Route 
-            path="/vehicles" 
+            path="/plaques"
             element={
               <ProtectedRoute>
-                <VehicleList />
+                <PlaqueList />
+              </ProtectedRoute>
+            } 
+          />
+          {/* Legacy route for backward compatibility */}
+          <Route 
+            path="/vehicles"
+            element={
+              <ProtectedRoute>
+                <PlaqueList />
               </ProtectedRoute>
             } 
           />

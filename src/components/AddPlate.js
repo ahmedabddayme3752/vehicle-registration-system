@@ -1,30 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Container, Form, Button, Row, Col, Navbar, Nav, NavDropdown, Alert, Spinner, Modal } from 'react-bootstrap';
 import { QRCodeSVG } from 'qrcode.react';
 import ApiService from '../services/api';
 
 const AddPlate = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showQR, setShowQR] = useState(false);
-  const [registeredVehicle, setRegisteredVehicle] = useState(null);
 
   const [formData, setFormData] = useState({
-    plateNumber: '',
-    ownerName: '',
-    ownerEmail: '',
-    ownerPhone: '',
+    nom: '',
+    postNom: '',
+    prenom: '',
+    district: '',
+    territoire: '',
+    secteur: '',
+    village: '',
+    province: '',
+    nationalite: '',
+    adresse: '',
+    telephone: '',
+    email: '',
     vehicleType: '',
     vehicleMake: '',
     vehicleModel: '',
-    vehicleYear: new Date().getFullYear(),
-    vehicleColor: '',
-    expiryDate: ''
+    vehicleYear: '',
+    vehicleColor: ''
   });
+  
+  const [plateNumber, setPlateNumber] = useState('');
+  const [qrCodeValue, setQrCodeValue] = useState('');
 
   useEffect(() => {
     // Check authentication
@@ -32,16 +40,6 @@ const AddPlate = () => {
       navigate('/');
       return;
     }
-
-    setUser(ApiService.getCurrentUser());
-    
-    // Set default expiry date (1 year from now)
-    const nextYear = new Date();
-    nextYear.setFullYear(nextYear.getFullYear() + 1);
-    setFormData(prev => ({
-      ...prev,
-      expiryDate: nextYear.toISOString().split('T')[0]
-    }));
   }, [navigate]);
 
   const handleChange = (e) => {
@@ -52,109 +50,83 @@ const AddPlate = () => {
     });
   };
 
-  const generatePlateNumber = () => {
-    // Generate a unique plate number (in real app, this would be from backend)
+  const handleGeneratePlate = () => {
+    // Generate a unique plate number
     const timestamp = Date.now().toString().slice(-6);
     const randomNum = Math.floor(Math.random() * 900) + 100;
-    return `DRC-${randomNum}-${timestamp}`;
+    const newPlateNumber = `${randomNum}/${timestamp.slice(0,2)}/${timestamp.slice(2,3)}`;
+    setPlateNumber(newPlateNumber);
+    setQrCodeValue('');
   };
 
-  const handleGeneratePlate = () => {
-    const newPlateNumber = generatePlateNumber();
-    setFormData({
-      ...formData,
-      plateNumber: newPlateNumber
-    });
-  };
-
-  const validateForm = () => {
-    const requiredFields = [
-      'plateNumber', 'ownerName', 'ownerEmail', 'ownerPhone',
-      'vehicleType', 'vehicleMake', 'vehicleModel', 'vehicleYear', 
-      'vehicleColor', 'expiryDate'
-    ];
-
-    for (let field of requiredFields) {
-      if (!formData[field]) {
-        setError(`Le champ ${field} est requis`);
-        return false;
-      }
-    }
-
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.ownerEmail)) {
-      setError('Adresse email invalide');
-      return false;
-    }
-
-    // Validate year
-    const currentYear = new Date().getFullYear();
-    if (formData.vehicleYear < 1900 || formData.vehicleYear > currentYear + 1) {
-      setError('Année du véhicule invalide');
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const vehicleData = {
-        plateNumber: formData.plateNumber,
-        ownerName: formData.ownerName,
-        ownerEmail: formData.ownerEmail,
-        ownerPhone: formData.ownerPhone,
+  const handleGenerateQR = async () => {
+    if (plateNumber && isFormComplete()) {
+      // Complete data for QR code (includes all form fields)
+      const completeData = {
+        plateNumber: plateNumber,
+        nom: formData.nom,
+        postNom: formData.postNom,
+        prenom: formData.prenom,
+        district: formData.district,
+        territoire: formData.territoire,
+        secteur: formData.secteur,
+        village: formData.village,
+        province: formData.province,
+        nationalite: formData.nationalite,
+        adresse: formData.adresse,
+        telephone: formData.telephone,
+        email: formData.email,
         vehicleType: formData.vehicleType,
         vehicleMake: formData.vehicleMake,
         vehicleModel: formData.vehicleModel,
-        vehicleYear: parseInt(formData.vehicleYear),
+        vehicleYear: formData.vehicleYear,
         vehicleColor: formData.vehicleColor,
-        expiryDate: new Date(formData.expiryDate).toISOString()
+        dateEnregistrement: new Date().toLocaleDateString('fr-FR')
       };
 
-      const response = await ApiService.createVehicle(vehicleData);
-      
-      setRegisteredVehicle(response.vehicle);
-      setSuccess('Véhicule enregistré avec succès!');
-      
-      // Reset form
-      setFormData({
-        plateNumber: '',
-        ownerName: '',
-        ownerEmail: '',
-        ownerPhone: '',
-        vehicleType: '',
-        vehicleMake: '',
-        vehicleModel: '',
-        vehicleYear: new Date().getFullYear(),
-        vehicleColor: '',
-        expiryDate: ''
-      });
+      try {
+        setLoading(true);
+        setError('');
 
-      // Set new expiry date
-      const nextYear = new Date();
-      nextYear.setFullYear(nextYear.getFullYear() + 1);
-      setFormData(prev => ({
-        ...prev,
-        expiryDate: nextYear.toISOString().split('T')[0]
-      }));
+        // Create plaque data for backend (keeping backend structure)
+        const plaqueData = {
+          plateNumber: plateNumber,
+          ownerName: formData.nom + ' ' + formData.postNom + ' ' + formData.prenom,
+          ownerEmail: formData.email,
+          ownerPhone: formData.telephone,
+          vehicleType: formData.vehicleType || 'Automobile',
+          vehicleMake: formData.vehicleMake || 'Toyota',
+          vehicleModel: formData.vehicleModel || 'Corolla',
+          vehicleYear: formData.vehicleYear || new Date().getFullYear(),
+          vehicleColor: formData.vehicleColor || 'Blanc',
+          expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year from now
+        };
 
-    } catch (err) {
-      setError(err.message || 'Erreur lors de l\'enregistrement du véhicule');
-    } finally {
-      setLoading(false);
+        const response = await ApiService.createPlaque(plaqueData);
+        
+        // Generate QR code with ALL the form data
+        setQrCodeValue(JSON.stringify(completeData));
+        setSuccess('Plaque enregistrée avec succès!');
+      } catch (err) {
+        setError(err.message || 'Erreur lors de l\'enregistrement de la plaque');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setError('Veuillez remplir tous les champs et générer un numéro de plaque');
     }
+  };
+
+  // Check if all form fields are filled
+  const isFormComplete = () => {
+    const requiredFields = [
+      'nom', 'postNom', 'prenom', 'district', 'territoire', 
+      'secteur', 'village', 'province', 'nationalite', 
+      'adresse', 'telephone', 'email', 'vehicleType', 
+      'vehicleMake', 'vehicleModel', 'vehicleYear', 'vehicleColor'
+    ];
+    
+    return requiredFields.every(field => formData[field] && formData[field].trim() !== '') && plateNumber;
   };
 
   const handleShowQR = () => {
@@ -173,13 +145,10 @@ const AddPlate = () => {
     navigate('/dashboard');
   };
 
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 1989 }, (_, i) => currentYear - i);
-
   return (
     <Container className="app-container p-0">
       <div className="app-header py-2">
-        <h5 className="app-title">Vehicle Registration System</h5>
+        <h5 className="app-title">App NEW TEC DRC</h5>
         <div className="header-content">
           <div className="header-text">
             <p className="mb-0">République Démocratique du Congo</p>
@@ -200,218 +169,189 @@ const AddPlate = () => {
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link onClick={handleBack}>Accueil</Nav.Link>
-              <NavDropdown title="Véhicules" id="basic-nav-dropdown" show>
-                <NavDropdown.Item href="#vehicles">Consulter</NavDropdown.Item>
-                <NavDropdown.Item active>Ajouter</NavDropdown.Item>
-                <NavDropdown.Item href="#vehicles/search">Rechercher</NavDropdown.Item>
-                {ApiService.isAdmin() && (
-                  <NavDropdown.Item href="#admin">Administration</NavDropdown.Item>
-                )}
+              <NavDropdown title="Plaques" id="basic-nav-dropdown">
+                <NavDropdown.Item as={Link} to="/add-plate" className="active">Ajouter</NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/plaques">Consulter</NavDropdown.Item>
+                <NavDropdown.Divider />
+                <NavDropdown.Item href="#plaques/search">Modifier</NavDropdown.Item>
+                <NavDropdown.Item href="#plaques/delete">Supprimer</NavDropdown.Item>
               </NavDropdown>
-              <Nav.Link href="/dashboard">Tableau de bord</Nav.Link>
+              <Nav.Link href="/dashboard">Dashboard</Nav.Link>
+              <Nav.Link href="#department">Département</Nav.Link>
               <Nav.Link href="#statistics">Statistiques</Nav.Link>
             </Nav>
-            <NavDropdown title={`👤 ${user?.username || 'Utilisateur'}`} id="user-nav-dropdown">
-              <NavDropdown.Item href="#profile">Profil</NavDropdown.Item>
-              <NavDropdown.Item href="#settings">Paramètres</NavDropdown.Item>
-              <NavDropdown.Divider />
-              <NavDropdown.Item onClick={handleLogout}>Se déconnecter</NavDropdown.Item>
-            </NavDropdown>
+            <Button variant="dark" onClick={handleLogout}>Se déconnecter</Button>
           </Navbar.Collapse>
         </Container>
       </Navbar>
 
       <div className="form-container">
-        <h4 className="mb-4">Enregistrement d'un nouveau véhicule</h4>
-        
         {error && <Alert variant="danger">{error}</Alert>}
         {success && <Alert variant="success">{success}</Alert>}
 
-        <Form onSubmit={handleSubmit}>
-          {/* Plate Number Section */}
+        <Form>
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
-              <Form.Label>Numéro de plaque*</Form.Label>
-            </Col>
-            <Col xs={6}>
-              <Form.Control 
-                type="text" 
-                name="plateNumber" 
-                value={formData.plateNumber}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                placeholder="Ex: DRC-123-456789"
-              />
-            </Col>
-            <Col xs={3}>
-              <Button 
-                variant="outline-primary" 
-                onClick={handleGeneratePlate}
-                disabled={loading}
-                className="w-100"
-              >
-                Générer
-              </Button>
-            </Col>
-          </Row>
-
-          {/* Owner Information */}
-          <h5 className="mt-4 mb-3">Informations du propriétaire</h5>
-          
-          <Row className="mb-3">
-            <Col xs={3} className="text-end pt-2">
-              <Form.Label>Nom complet*</Form.Label>
+              <Form.Label>Nom</Form.Label>
             </Col>
             <Col xs={9}>
               <Form.Control 
                 type="text" 
-                name="ownerName" 
-                value={formData.ownerName}
+                name="nom" 
+                value={formData.nom}
                 onChange={handleChange}
-                required
+                placeholder="Ex: Kabila"
                 disabled={loading}
-                placeholder="Ex: Jean Baptiste Mukendi"
               />
             </Col>
           </Row>
 
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
-              <Form.Label>Email*</Form.Label>
+              <Form.Label>Post-nom</Form.Label>
             </Col>
             <Col xs={9}>
               <Form.Control 
-                type="email" 
-                name="ownerEmail" 
-                value={formData.ownerEmail}
+                type="text" 
+                name="postNom" 
+                value={formData.postNom}
                 onChange={handleChange}
-                required
+                placeholder="Ex: Kabange"
                 disabled={loading}
-                placeholder="Ex: jean.mukendi@example.com"
               />
             </Col>
           </Row>
 
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
-              <Form.Label>Téléphone*</Form.Label>
+              <Form.Label>Prénom</Form.Label>
             </Col>
             <Col xs={9}>
               <Form.Control 
-                type="tel" 
-                name="ownerPhone" 
-                value={formData.ownerPhone}
+                type="text" 
+                name="prenom" 
+                value={formData.prenom}
                 onChange={handleChange}
-                required
+                placeholder="Ex: Joseph"
                 disabled={loading}
-                placeholder="Ex: +243 900 000 000"
               />
             </Col>
           </Row>
 
-          {/* Vehicle Information */}
-          <h5 className="mt-4 mb-3">Informations du véhicule</h5>
-
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
-              <Form.Label>Type de véhicule*</Form.Label>
+              <Form.Label>District</Form.Label>
             </Col>
             <Col xs={9}>
               <Form.Select 
-                name="vehicleType" 
-                value={formData.vehicleType}
+                name="district" 
+                value={formData.district}
                 onChange={handleChange}
-                required
+                className="select-with-icon"
                 disabled={loading}
               >
-                <option value="">Sélectionner le type</option>
-                <option value="Voiture">Voiture</option>
-                <option value="Moto">Moto</option>
-                <option value="Camion">Camion</option>
-                <option value="Bus">Bus</option>
-                <option value="Minibus">Minibus</option>
-                <option value="SUV">SUV</option>
-                <option value="Pickup">Pickup</option>
+                <option>Sélectionner le district</option>
+                <option value="Lukaya">Lukaya</option>
+                <option value="Kinshasa">Kinshasa</option>
+                <option value="Bas-Congo">Bas-Congo</option>
               </Form.Select>
             </Col>
           </Row>
 
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
-              <Form.Label>Marque*</Form.Label>
-            </Col>
-            <Col xs={9}>
-              <Form.Control 
-                type="text" 
-                name="vehicleMake" 
-                value={formData.vehicleMake}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                placeholder="Ex: Toyota, Nissan, Honda"
-              />
-            </Col>
-          </Row>
-
-          <Row className="mb-3">
-            <Col xs={3} className="text-end pt-2">
-              <Form.Label>Modèle*</Form.Label>
-            </Col>
-            <Col xs={9}>
-              <Form.Control 
-                type="text" 
-                name="vehicleModel" 
-                value={formData.vehicleModel}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                placeholder="Ex: Corolla, Altima, Civic"
-              />
-            </Col>
-          </Row>
-
-          <Row className="mb-3">
-            <Col xs={3} className="text-end pt-2">
-              <Form.Label>Année*</Form.Label>
+              <Form.Label>Territoire</Form.Label>
             </Col>
             <Col xs={9}>
               <Form.Select 
-                name="vehicleYear" 
-                value={formData.vehicleYear}
+                name="territoire" 
+                value={formData.territoire}
                 onChange={handleChange}
-                required
+                className="select-with-icon"
                 disabled={loading}
               >
-                {years.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
+                <option>Sélectionner le territoire</option>
+                <option value="Madimba">Madimba</option>
+                <option value="Kasangulu">Kasangulu</option>
+                <option value="Kimvula">Kimvula</option>
               </Form.Select>
             </Col>
           </Row>
 
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
-              <Form.Label>Couleur*</Form.Label>
+              <Form.Label>Secteur</Form.Label>
             </Col>
             <Col xs={9}>
               <Form.Select 
-                name="vehicleColor" 
-                value={formData.vehicleColor}
+                name="secteur" 
+                value={formData.secteur}
                 onChange={handleChange}
-                required
+                className="select-with-icon"
                 disabled={loading}
               >
-                <option value="">Sélectionner la couleur</option>
-                <option value="Blanc">Blanc</option>
-                <option value="Noir">Noir</option>
-                <option value="Gris">Gris</option>
-                <option value="Rouge">Rouge</option>
-                <option value="Bleu">Bleu</option>
-                <option value="Vert">Vert</option>
-                <option value="Jaune">Jaune</option>
-                <option value="Marron">Marron</option>
-                <option value="Argent">Argent</option>
+                <option>Sélectionner le secteur</option>
+                <option value="Secteur1">Secteur 1</option>
+                <option value="Secteur2">Secteur 2</option>
+                <option value="Secteur3">Secteur 3</option>
+              </Form.Select>
+            </Col>
+          </Row>
+
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
+              <Form.Label>Village</Form.Label>
+            </Col>
+            <Col xs={9}>
+              <Form.Select 
+                name="village" 
+                value={formData.village}
+                onChange={handleChange}
+                className="select-with-icon"
+                disabled={loading}
+              >
+                <option>Sélectionner le village</option>
+                <option value="Ngeba">Ngeba</option>
+                <option value="Kimpese">Kimpese</option>
+                <option value="Mbanza-Ngungu">Mbanza-Ngungu</option>
+              </Form.Select>
+            </Col>
+          </Row>
+
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
+              <Form.Label>Province</Form.Label>
+            </Col>
+            <Col xs={9}>
+              <Form.Select 
+                name="province" 
+                value={formData.province}
+                onChange={handleChange}
+                className="select-with-icon"
+                disabled={loading}
+              >
+                <option>Sélectionner la province</option>
+                <option value="Kongo-Central">Kongo-Central</option>
+                <option value="Kinshasa">Kinshasa</option>
+                <option value="Kwilu">Kwilu</option>
+              </Form.Select>
+            </Col>
+          </Row>
+
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
+              <Form.Label>Nationalité</Form.Label>
+            </Col>
+            <Col xs={9}>
+              <Form.Select 
+                name="nationalite" 
+                value={formData.nationalite}
+                onChange={handleChange}
+                className="select-with-icon"
+                disabled={loading}
+              >
+                <option>Sélectionner la nationalité</option>
+                <option value="Congolaise">Congolaise</option>
                 <option value="Autre">Autre</option>
               </Form.Select>
             </Col>
@@ -419,91 +359,271 @@ const AddPlate = () => {
 
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
-              <Form.Label>Date d'expiration*</Form.Label>
+              <Form.Label>Adresse</Form.Label>
             </Col>
             <Col xs={9}>
               <Form.Control 
-                type="date" 
-                name="expiryDate" 
-                value={formData.expiryDate}
+                type="text" 
+                name="adresse" 
+                value={formData.adresse}
                 onChange={handleChange}
-                required
+                placeholder="Ex: Avenue Kasa-Vubu, Commune de Gombe"
                 disabled={loading}
-                min={new Date().toISOString().split('T')[0]}
               />
             </Col>
           </Row>
 
-          {/* Submit Buttons */}
-          <Row className="mt-4">
-            <Col xs={3}></Col>
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
+              <Form.Label>Téléphone</Form.Label>
+            </Col>
             <Col xs={9}>
-              <div className="d-flex gap-2">
-                <Button 
-                  variant="success" 
-                  type="submit"
-                  disabled={loading}
-                  className="px-4"
-                >
-                  {loading ? (
-                    <>
-                      <Spinner as="span" animation="border" size="sm" className="me-2" />
-                      Enregistrement...
-                    </>
-                  ) : (
-                    'Enregistrer le véhicule'
-                  )}
-                </Button>
-                
-                {registeredVehicle && (
-                  <Button 
-                    variant="outline-primary" 
-                    onClick={handleShowQR}
-                    disabled={loading}
-                  >
-                    📱 Générer QR Code
-                  </Button>
-                )}
-                
-                <Button 
-                  variant="secondary" 
-                  type="button"
-                  onClick={handleBack}
-                  disabled={loading}
-                >
-                  Retour
-                </Button>
-              </div>
+              <Form.Control 
+                type="text" 
+                name="telephone" 
+                value={formData.telephone}
+                onChange={handleChange}
+                placeholder="Ex: +243 81 234 5678"
+                disabled={loading}
+              />
             </Col>
           </Row>
+
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
+              <Form.Label>E-mail</Form.Label>
+            </Col>
+            <Col xs={9}>
+              <Form.Control 
+                type="email" 
+                name="email" 
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Ex: joseph.kabila@email.com"
+                disabled={loading}
+              />
+            </Col>
+          </Row>
+
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
+              <Form.Label>Type de véhicule</Form.Label>
+            </Col>
+            <Col xs={9}>
+              <Form.Select 
+                name="vehicleType" 
+                value={formData.vehicleType}
+                onChange={handleChange}
+                className="select-with-icon"
+                disabled={loading}
+              >
+                <option>Sélectionner le type de véhicule</option>
+                <option value="Automobile">Automobile</option>
+                <option value="SUV">SUV</option>
+                <option value="Pick-up">Pick-up</option>
+                <option value="Camion">Camion</option>
+                <option value="Camionnette">Camionnette</option>
+                <option value="Bus">Bus</option>
+                <option value="Minibus">Minibus</option>
+                <option value="Moto">Moto</option>
+                <option value="Scooter">Scooter</option>
+                <option value="Tricycle">Tricycle</option>
+                <option value="Autre">Autre</option>
+              </Form.Select>
+            </Col>
+          </Row>
+
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
+              <Form.Label>Marque</Form.Label>
+            </Col>
+            <Col xs={9}>
+              <Form.Select 
+                name="vehicleMake" 
+                value={formData.vehicleMake}
+                onChange={handleChange}
+                className="select-with-icon"
+                disabled={loading}
+              >
+                <option>Sélectionner la marque</option>
+                <option value="Toyota">Toyota</option>
+                <option value="Honda">Honda</option>
+                <option value="Nissan">Nissan</option>
+                <option value="Hyundai">Hyundai</option>
+                <option value="Kia">Kia</option>
+                <option value="Mazda">Mazda</option>
+                <option value="Mitsubishi">Mitsubishi</option>
+                <option value="Ford">Ford</option>
+                <option value="Chevrolet">Chevrolet</option>
+                <option value="Peugeot">Peugeot</option>
+                <option value="Renault">Renault</option>
+                <option value="Volkswagen">Volkswagen</option>
+                <option value="Mercedes-Benz">Mercedes-Benz</option>
+                <option value="BMW">BMW</option>
+                <option value="Audi">Audi</option>
+                <option value="Autre">Autre</option>
+              </Form.Select>
+            </Col>
+          </Row>
+
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
+              <Form.Label>Modèle</Form.Label>
+            </Col>
+            <Col xs={9}>
+              <Form.Control 
+                type="text" 
+                name="vehicleModel" 
+                value={formData.vehicleModel}
+                onChange={handleChange}
+                placeholder="Ex: Corolla, Civic, Sentra..."
+                disabled={loading}
+              />
+            </Col>
+          </Row>
+
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
+              <Form.Label>Année</Form.Label>
+            </Col>
+            <Col xs={9}>
+              <Form.Select 
+                name="vehicleYear" 
+                value={formData.vehicleYear}
+                onChange={handleChange}
+                className="select-with-icon"
+                disabled={loading}
+              >
+                <option>Sélectionner l'année</option>
+                {Array.from({length: 30}, (_, i) => {
+                  const year = new Date().getFullYear() - i;
+                  return <option key={year} value={year}>{year}</option>;
+                })}
+              </Form.Select>
+            </Col>
+          </Row>
+
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
+              <Form.Label>Couleur</Form.Label>
+            </Col>
+            <Col xs={9}>
+              <Form.Select 
+                name="vehicleColor" 
+                value={formData.vehicleColor}
+                onChange={handleChange}
+                className="select-with-icon"
+                disabled={loading}
+              >
+                <option>Sélectionner la couleur</option>
+                <option value="Blanc">Blanc</option>
+                <option value="Noir">Noir</option>
+                <option value="Gris">Gris</option>
+                <option value="Argent">Argent</option>
+                <option value="Rouge">Rouge</option>
+                <option value="Bleu">Bleu</option>
+                <option value="Vert">Vert</option>
+                <option value="Jaune">Jaune</option>
+                <option value="Orange">Orange</option>
+                <option value="Marron">Marron</option>
+                <option value="Violet">Violet</option>
+                <option value="Rose">Rose</option>
+                <option value="Beige">Beige</option>
+                <option value="Doré">Doré</option>
+                <option value="Autre">Autre</option>
+              </Form.Select>
+            </Col>
+          </Row>
+
+          <Row className="mb-3">
+            <Col xs={3} className="text-end pt-2">
+              <Form.Label>Numéro de plaque</Form.Label>
+            </Col>
+            <Col xs={4}>
+              <Button 
+                variant="success" 
+                onClick={handleGeneratePlate}
+                className="btn-generate-plate w-100"
+                disabled={loading}
+              >
+                Générer numéro de plaque
+              </Button>
+            </Col>
+            <Col xs={5}>
+              <Button 
+                variant="success" 
+                onClick={handleGenerateQR}
+                className="btn-generate-qr w-100"
+                disabled={!plateNumber || !isFormComplete() || loading}
+              >
+                {loading ? (
+                  <>
+                    <Spinner as="span" animation="border" size="sm" className="me-2" />
+                    Génération...
+                  </>
+                ) : (
+                  'Générer le code-barre'
+                )}
+              </Button>
+            </Col>
+          </Row>
+
+          {plateNumber && (
+            <Row className="mb-3">
+              <Col xs={{span: 4, offset: 3}}>
+                <div className="plate-number-display">
+                  {plateNumber}
+                </div>
+              </Col>
+              <Col xs={5}>
+                {qrCodeValue && (
+                  <div className="qr-code-container">
+                    <QRCodeSVG 
+                      value={qrCodeValue} 
+                      size={120}
+                      level="H"
+                    />
+                    <div className="mt-2">
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm"
+                        onClick={handleShowQR}
+                      >
+                        Agrandir QR Code
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Col>
+            </Row>
+          )}
         </Form>
       </div>
 
       {/* QR Code Modal */}
       <Modal show={showQR} onHide={handleCloseQR} centered>
         <Modal.Header closeButton>
-          <Modal.Title>Code QR du véhicule</Modal.Title>
+          <Modal.Title>Code QR - {plateNumber}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="text-center">
-          {registeredVehicle && (
+          {qrCodeValue && (
             <>
-              <h5>{registeredVehicle.plate_number}</h5>
               <div className="my-3">
                 <QRCodeSVG 
-                  value={JSON.stringify({
-                    plateNumber: registeredVehicle.plate_number,
-                    ownerName: registeredVehicle.owner_name,
-                    vehicleMake: registeredVehicle.vehicle_make,
-                    vehicleModel: registeredVehicle.vehicle_model,
-                    expiryDate: registeredVehicle.expiry_date
-                  })}
-                  size={200}
+                  value={qrCodeValue}
+                  size={250}
                   level="H"
                 />
               </div>
               <p className="text-muted">
-                Scannez ce code pour voir les détails du véhicule
+                Numéro de plaque: <strong>{plateNumber}</strong>
               </p>
+              <p className="text-muted">
+                Propriétaire: <strong>{formData.nom} {formData.postNom} {formData.prenom}</strong>
+              </p>
+              <small className="text-info">
+                Ce QR code contient toutes les informations de la plaque
+              </small>
             </>
           )}
         </Modal.Body>

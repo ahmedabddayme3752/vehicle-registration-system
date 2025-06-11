@@ -6,10 +6,10 @@ import {
 } from 'react-bootstrap';
 import ApiService from '../services/api';
 
-const VehicleList = () => {
+const PlaqueList = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [vehicles, setVehicles] = useState([]);
+  const [plaques, setPlaques] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -17,13 +17,14 @@ const VehicleList = () => {
   // Pagination and filtering
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalPlaques, setTotalPlaques] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [limit] = useState(10);
 
   // Delete modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [vehicleToDelete, setVehicleToDelete] = useState(null);
+  const [plaqueToDelete, setPlaqueToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -34,10 +35,10 @@ const VehicleList = () => {
     }
 
     setUser(ApiService.getCurrentUser());
-    loadVehicles();
+    loadPlaques();
   }, [navigate, currentPage, searchTerm, statusFilter]);
 
-  const loadVehicles = async () => {
+  const loadPlaques = async () => {
     try {
       setLoading(true);
       setError('');
@@ -49,12 +50,13 @@ const VehicleList = () => {
         ...(statusFilter && { status: statusFilter })
       };
 
-      const response = await ApiService.getVehicles(params);
-      setVehicles(response.vehicles);
-      setTotalPages(response.totalPages);
+      const response = await ApiService.getPlaques(params);
+      setPlaques(response.plaques || response.vehicles || []);
+      setTotalPages(response.pagination?.totalPages || 1);
+      setTotalPlaques(response.pagination?.total || 0);
     } catch (err) {
-      setError('Erreur lors du chargement des véhicules');
-      console.error('Error loading vehicles:', err);
+      setError('Erreur lors du chargement des plaques');
+      console.error('Error loading plaques:', err);
     } finally {
       setLoading(false);
     }
@@ -63,7 +65,7 @@ const VehicleList = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     setCurrentPage(1);
-    loadVehicles();
+    loadPlaques();
   };
 
   const handlePageChange = (page) => {
@@ -75,24 +77,24 @@ const VehicleList = () => {
     setCurrentPage(1);
   };
 
-  const handleDeleteClick = (vehicle) => {
-    setVehicleToDelete(vehicle);
+  const handleDeleteClick = (plaque) => {
+    setPlaqueToDelete(plaque);
     setShowDeleteModal(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!vehicleToDelete) return;
+    if (!plaqueToDelete) return;
 
     try {
       setDeleting(true);
-      await ApiService.deleteVehicle(vehicleToDelete.id);
-      setSuccess(`Véhicule ${vehicleToDelete.plate_number} supprimé avec succès`);
+      await ApiService.deletePlaque(plaqueToDelete.id);
+      setSuccess(`Plaque ${plaqueToDelete.plate_number} supprimée avec succès`);
       setShowDeleteModal(false);
-      setVehicleToDelete(null);
-      loadVehicles(); // Reload the list
+      setPlaqueToDelete(null);
+      loadPlaques(); // Reload the list
     } catch (err) {
-      setError('Erreur lors de la suppression du véhicule');
-      console.error('Error deleting vehicle:', err);
+      setError('Erreur lors de la suppression de la plaque');
+      console.error('Error deleting plaque:', err);
     } finally {
       setDeleting(false);
     }
@@ -100,7 +102,7 @@ const VehicleList = () => {
 
   const handleDeleteCancel = () => {
     setShowDeleteModal(false);
-    setVehicleToDelete(null);
+    setPlaqueToDelete(null);
   };
 
   const handleLogout = () => {
@@ -178,7 +180,7 @@ const VehicleList = () => {
   return (
     <Container className="app-container p-0">
       <div className="app-header py-2">
-        <h5 className="app-title">Vehicle Registration System</h5>
+        <h5 className="app-title">Système d'Enregistrement des Plaques</h5>
         <div className="header-content">
           <div className="header-text">
             <p className="mb-0">République Démocratique du Congo</p>
@@ -199,10 +201,10 @@ const VehicleList = () => {
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link as={Link} to="/dashboard">Accueil</Nav.Link>
-              <NavDropdown title="Véhicules" id="basic-nav-dropdown" show>
+              <NavDropdown title="Plaques" id="basic-nav-dropdown">
                 <NavDropdown.Item active>Consulter</NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/add-plate">Ajouter</NavDropdown.Item>
-                <NavDropdown.Item href="#vehicles/search">Rechercher</NavDropdown.Item>
+                <NavDropdown.Item href="#plaques/search">Rechercher</NavDropdown.Item>
                 {ApiService.isAdmin() && (
                   <NavDropdown.Item href="#admin">Administration</NavDropdown.Item>
                 )}
@@ -222,9 +224,9 @@ const VehicleList = () => {
 
       <div className="p-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h4>Liste des véhicules</h4>
+          <h4>Liste des plaques</h4>
           <Button as={Link} to="/add-plate" variant="success">
-            ➕ Nouveau véhicule
+            ➕ Nouvelle plaque
           </Button>
         </div>
 
@@ -282,22 +284,31 @@ const VehicleList = () => {
           </Col>
         </Row>
 
-        {/* Vehicles Table */}
+        {/* Results Summary */}
+        <div className="mb-3">
+          <small className="text-muted">
+            Affichage de {plaques.length} plaques sur {totalPlaques} au total
+            {searchTerm && ` (recherche: "${searchTerm}")`}
+            {statusFilter && ` (statut: ${statusFilter})`}
+          </small>
+        </div>
+
+        {/* Plaques Table */}
         {loading ? (
           <div className="text-center py-5">
             <Spinner animation="border" role="status">
               <span className="visually-hidden">Chargement...</span>
             </Spinner>
-            <p className="mt-2">Chargement des véhicules...</p>
+            <p className="mt-2">Chargement des plaques...</p>
           </div>
-        ) : vehicles.length > 0 ? (
+        ) : plaques.length > 0 ? (
           <>
             <Table responsive striped hover>
               <thead className="table-dark">
                 <tr>
                   <th>Plaque</th>
                   <th>Propriétaire</th>
-                  <th>Véhicule</th>
+                  <th>Plaque Info</th>
                   <th>Type</th>
                   <th>Couleur</th>
                   <th>Statut</th>
@@ -306,32 +317,32 @@ const VehicleList = () => {
                 </tr>
               </thead>
               <tbody>
-                {vehicles.map((vehicle) => (
-                  <tr key={vehicle.id}>
+                {plaques.map((plaque) => (
+                  <tr key={plaque.id}>
                     <td>
-                      <strong>{vehicle.plate_number}</strong>
-                      {isExpiringSoon(vehicle.expiry_date) && (
+                      <strong>{plaque.plate_number}</strong>
+                      {isExpiringSoon(plaque.expiry_date) && (
                         <Badge bg="warning" className="ms-2">⚠️</Badge>
                       )}
                     </td>
                     <td>
                       <div>
-                        <strong>{vehicle.owner_name}</strong>
+                        <strong>{plaque.owner_name}</strong>
                         <br />
-                        <small className="text-muted">{vehicle.owner_email}</small>
+                        <small className="text-muted">{plaque.owner_email}</small>
                       </div>
                     </td>
                     <td>
-                      {vehicle.vehicle_make} {vehicle.vehicle_model}
+                      {plaque.plaque_make || plaque.vehicle_make} {plaque.plaque_model || plaque.vehicle_model}
                       <br />
-                      <small className="text-muted">{vehicle.vehicle_year}</small>
+                      <small className="text-muted">{plaque.plaque_year || plaque.vehicle_year}</small>
                     </td>
-                    <td>{vehicle.vehicle_type}</td>
-                    <td>{vehicle.vehicle_color}</td>
-                    <td>{getStatusBadge(vehicle.status)}</td>
+                    <td>{plaque.plaque_type || plaque.vehicle_type}</td>
+                    <td>{plaque.plaque_color || plaque.vehicle_color}</td>
+                    <td>{getStatusBadge(plaque.status)}</td>
                     <td>
-                      {formatDate(vehicle.expiry_date)}
-                      {isExpiringSoon(vehicle.expiry_date) && (
+                      {formatDate(plaque.expiry_date)}
+                      {isExpiringSoon(plaque.expiry_date) && (
                         <small className="text-warning d-block">Expire bientôt</small>
                       )}
                     </td>
@@ -356,7 +367,7 @@ const VehicleList = () => {
                             size="sm"
                             variant="outline-danger"
                             title="Supprimer"
-                            onClick={() => handleDeleteClick(vehicle)}
+                            onClick={() => handleDeleteClick(plaque)}
                           >
                             🗑️
                           </Button>
@@ -373,15 +384,15 @@ const VehicleList = () => {
           </>
         ) : (
           <div className="text-center py-5">
-            <h5>Aucun véhicule trouvé</h5>
+            <h5>Aucune plaque trouvée</h5>
             <p className="text-muted">
               {searchTerm || statusFilter 
                 ? 'Essayez de modifier vos critères de recherche.' 
-                : 'Commencez par enregistrer votre premier véhicule.'
+                : 'Commencez par enregistrer votre première plaque.'
               }
             </p>
             <Button as={Link} to="/add-plate" variant="primary">
-              Enregistrer un véhicule
+              Enregistrer une plaque
             </Button>
           </div>
         )}
@@ -393,13 +404,13 @@ const VehicleList = () => {
           <Modal.Title>Confirmer la suppression</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {vehicleToDelete && (
+          {plaqueToDelete && (
             <div>
-              <p>Êtes-vous sûr de vouloir supprimer ce véhicule ?</p>
+              <p>Êtes-vous sûr de vouloir supprimer cette plaque ?</p>
               <div className="bg-light p-3 rounded">
-                <strong>Plaque:</strong> {vehicleToDelete.plate_number}<br />
-                <strong>Propriétaire:</strong> {vehicleToDelete.owner_name}<br />
-                <strong>Véhicule:</strong> {vehicleToDelete.vehicle_make} {vehicleToDelete.vehicle_model}
+                <strong>Plaque:</strong> {plaqueToDelete.plate_number}<br />
+                <strong>Propriétaire:</strong> {plaqueToDelete.owner_name}<br />
+                <strong>Plaque:</strong> {plaqueToDelete.plaque_make || plaqueToDelete.vehicle_make} {plaqueToDelete.plaque_model || plaqueToDelete.vehicle_model}
               </div>
               <p className="text-danger mt-2">
                 <small>⚠️ Cette action est irréversible.</small>
@@ -436,4 +447,4 @@ const VehicleList = () => {
   );
 };
 
-export default VehicleList; 
+export default PlaqueList; 

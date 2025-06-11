@@ -112,7 +112,7 @@ const Login = () => {
   return (
     <Container className="app-container">
       <div className="app-header mt-3 mb-3">
-        <h5 className="app-title">Vehicle Registration System</h5>
+        <h5 className="app-title">Système d'Enregistrement des Plaques</h5>
         <div className="header-content">
           <div className="header-text">
             <p className="mb-0">République Démocratique du Congo</p>

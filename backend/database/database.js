@@ -36,19 +36,19 @@ class Database {
         )
       `;
 
-      // Vehicles table
-      const createVehiclesTable = `
-        CREATE TABLE IF NOT EXISTS vehicles (
+      // Plaques table
+      const createPlaquesTable = `
+        CREATE TABLE IF NOT EXISTS plaques (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           plate_number TEXT UNIQUE NOT NULL,
           owner_name TEXT NOT NULL,
           owner_email TEXT NOT NULL,
           owner_phone TEXT NOT NULL,
-          vehicle_type TEXT NOT NULL,
-          vehicle_make TEXT NOT NULL,
-          vehicle_model TEXT NOT NULL,
-          vehicle_year INTEGER NOT NULL,
-          vehicle_color TEXT NOT NULL,
+          plaque_type TEXT NOT NULL,
+          plaque_make TEXT NOT NULL,
+          plaque_model TEXT NOT NULL,
+          plaque_year INTEGER NOT NULL,
+          plaque_color TEXT NOT NULL,
           registration_date DATETIME DEFAULT CURRENT_TIMESTAMP,
           expiry_date DATETIME NOT NULL,
           status TEXT DEFAULT 'active',
@@ -59,6 +59,11 @@ class Database {
         )
       `;
 
+      // Drop old legacy vehicles table if it exists
+      const dropLegacyVehiclesTable = `
+        DROP TABLE IF EXISTS vehicles
+      `;
+
       // Create default admin user
       const createDefaultAdmin = `
         INSERT OR IGNORE INTO users (username, email, password, role)
@@ -66,6 +71,15 @@ class Database {
       `;
 
       this.db.serialize(() => {
+        // First drop the old vehicles table if it exists
+        this.db.run(dropLegacyVehiclesTable, (err) => {
+          if (err && !err.message.includes('no such table')) {
+            console.error('Error dropping legacy vehicles table:', err);
+          } else {
+            console.log('Legacy vehicles table removed (if it existed)');
+          }
+        });
+
         this.db.run(createUsersTable, (err) => {
           if (err) {
             console.error('Error creating users table:', err);
@@ -74,9 +88,9 @@ class Database {
           }
         });
 
-        this.db.run(createVehiclesTable, (err) => {
+        this.db.run(createPlaquesTable, (err) => {
           if (err) {
-            console.error('Error creating vehicles table:', err);
+            console.error('Error creating plaques table:', err);
             reject(err);
             return;
           }
@@ -88,7 +102,7 @@ class Database {
             reject(err);
             return;
           }
-          console.log('Database tables initialized successfully');
+          console.log('Database tables initialized successfully with fresh plaques table');
           resolve();
         });
       });

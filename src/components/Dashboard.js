@@ -6,7 +6,7 @@ import ApiService from '../services/api';
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
-  const [recentVehicles, setRecentVehicles] = useState([]);
+  const [recentPlaques, setRecentPlaques] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -25,16 +25,16 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Load user profile, stats, and recent vehicles in parallel
-      const [userProfile, vehicleStats, vehiclesResponse] = await Promise.all([
+      // Load user profile, stats, and recent plaques in parallel
+      const [userProfile, plaqueStats, plaquesResponse] = await Promise.all([
         ApiService.getCurrentUserProfile(),
-        ApiService.getVehicleStats(),
-        ApiService.getVehicles({ page: 1, limit: 5 }) // Get latest 5 vehicles
+        ApiService.getPlaqueStats(),
+        ApiService.getPlaques({ page: 1, limit: 5 }) // Get latest 5 plaques
       ]);
 
       setUser(userProfile);
-      setStats(vehicleStats);
-      setRecentVehicles(vehiclesResponse.vehicles || []);
+      setStats(plaqueStats);
+      setRecentPlaques(plaquesResponse.plaques || plaquesResponse.vehicles || []);
     } catch (err) {
       console.error('Error loading dashboard data:', err);
       setError('Failed to load dashboard data. Please try again.');
@@ -78,7 +78,7 @@ const Dashboard = () => {
   return (
     <Container className="app-container p-0">
       <div className="app-header py-2">
-        <h5 className="app-title">Vehicle Registration System</h5>
+        <h5 className="app-title">Système d'Enregistrement des Plaques</h5>
         <div className="header-content">
           <div className="header-text">
             <p className="mb-0">République Démocratique du Congo</p>
@@ -99,10 +99,10 @@ const Dashboard = () => {
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link href="#/dashboard">Accueil</Nav.Link>
-              <NavDropdown title="Véhicules" id="basic-nav-dropdown">
+              <NavDropdown title="Plaques" id="basic-nav-dropdown">
                 <NavDropdown.Item as={Link} to="/add-plate">Ajouter</NavDropdown.Item>
-                <NavDropdown.Item as={Link} to="/vehicles">Consulter</NavDropdown.Item>
-                <NavDropdown.Item href="#vehicles/search">Rechercher</NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/plaques">Consulter</NavDropdown.Item>
+                <NavDropdown.Item href="#plaques/search">Rechercher</NavDropdown.Item>
                 {ApiService.isAdmin() && (
                   <NavDropdown.Item href="#admin">Administration</NavDropdown.Item>
                 )}
@@ -139,7 +139,7 @@ const Dashboard = () => {
               <Card className="text-center h-100">
                 <Card.Body>
                   <Card.Title className="text-primary">{stats.total}</Card.Title>
-                  <Card.Text>Total Véhicules</Card.Text>
+                  <Card.Text>Total Plaques</Card.Text>
                 </Card.Body>
               </Card>
             </Col>
@@ -147,7 +147,7 @@ const Dashboard = () => {
               <Card className="text-center h-100">
                 <Card.Body>
                   <Card.Title className="text-success">{stats.active}</Card.Title>
-                  <Card.Text>Véhicules Actifs</Card.Text>
+                  <Card.Text>Plaques Actives</Card.Text>
                 </Card.Body>
               </Card>
             </Col>
@@ -155,7 +155,7 @@ const Dashboard = () => {
               <Card className="text-center h-100">
                 <Card.Body>
                   <Card.Title className="text-danger">{stats.expired}</Card.Title>
-                  <Card.Text>Véhicules Expirés</Card.Text>
+                  <Card.Text>Plaques Expirées</Card.Text>
                 </Card.Body>
               </Card>
             </Col>
@@ -170,18 +170,18 @@ const Dashboard = () => {
           </Row>
         )}
 
-        {/* Recent Vehicles */}
+        {/* Recent Plaques */}
         <Row>
           <Col md={12}>
             <Card>
               <Card.Header className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">Véhicules Récents</h5>
+                <h5 className="mb-0">Plaques Récentes</h5>
                 <Button as={Link} to="/add-plate" variant="primary" size="sm">
-                  Ajouter Véhicule
+                  Ajouter Plaque
                 </Button>
               </Card.Header>
               <Card.Body>
-                {recentVehicles.length > 0 ? (
+                {recentPlaques.length > 0 ? (
                   <Table responsive striped hover>
                     <thead>
                       <tr>
@@ -194,25 +194,25 @@ const Dashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {recentVehicles.map((vehicle) => (
-                        <tr key={vehicle.id}>
+                      {recentPlaques.map((plaque) => (
+                        <tr key={plaque.id}>
                           <td>
-                            <strong>{vehicle.plate_number}</strong>
+                            <strong>{plaque.plate_number}</strong>
                           </td>
-                          <td>{vehicle.owner_name}</td>
-                          <td>{vehicle.vehicle_make}</td>
-                          <td>{vehicle.vehicle_model}</td>
-                          <td>{getStatusBadge(vehicle.status)}</td>
-                          <td>{formatDate(vehicle.expiry_date)}</td>
+                          <td>{plaque.owner_name}</td>
+                          <td>{plaque.plaque_make || plaque.vehicle_make}</td>
+                          <td>{plaque.plaque_model || plaque.vehicle_model}</td>
+                          <td>{getStatusBadge(plaque.status)}</td>
+                          <td>{formatDate(plaque.expiry_date)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </Table>
                 ) : (
                   <div className="text-center py-4">
-                    <p className="text-muted">Aucun véhicule enregistré pour le moment.</p>
+                    <p className="text-muted">Aucune plaque enregistrée pour le moment.</p>
                     <Button as={Link} to="/add-plate" variant="primary">
-                      Enregistrer le premier véhicule
+                      Enregistrer la première plaque
                     </Button>
                   </div>
                 )}
@@ -231,9 +231,9 @@ const Dashboard = () => {
               <Card.Body>
                 <div className="d-flex flex-wrap gap-2">
                   <Button as={Link} to="/add-plate" variant="success">
-                    ➕ Nouveau Véhicule
+                    ➕ Nouvelle Plaque
                   </Button>
-                  <Button href="#vehicles/search" variant="info">
+                  <Button href="#plaques/search" variant="info">
                     🔍 Rechercher
                   </Button>
                   <Button href="#statistics" variant="warning">

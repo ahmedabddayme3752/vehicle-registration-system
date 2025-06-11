@@ -106,43 +106,74 @@ class ApiService {
     window.location.href = '/';
   }
 
-  // Vehicle methods
-  async getVehicles(params = {}) {
+  // Plaque methods
+  async getPlaques(params = {}) {
     const queryString = new URLSearchParams(params).toString();
-    const endpoint = queryString ? `/vehicles?${queryString}` : '/vehicles';
-    return await this.makeRequest(endpoint);
+    return this.makeRequest(queryString ? `/vehicles?${queryString}` : '/vehicles');
   }
 
-  async getVehicleById(id) {
-    return await this.makeRequest(`/vehicles/${id}`);
+  async getPlaqueById(id) {
+    return this.makeRequest(`/vehicles/${id}`);
   }
 
-  async getVehicleByPlateNumber(plateNumber) {
-    return await this.makeRequest(`/vehicles/plate/${plateNumber}`);
+  async getPlaqueByPlateNumber(plateNumber) {
+    return this.makeRequest(`/vehicles/plate/${plateNumber}`);
   }
 
-  async createVehicle(vehicleData) {
-    return await this.makeRequest('/vehicles', {
+  async createPlaque(plaqueData) {
+    return this.makeRequest('/vehicles', {
       method: 'POST',
-      body: JSON.stringify(vehicleData),
+      body: JSON.stringify(plaqueData),
     });
   }
 
-  async updateVehicle(id, vehicleData) {
-    return await this.makeRequest(`/vehicles/${id}`, {
+  // Legacy method names for backward compatibility
+  async createVehicle(vehicleData) {
+    return this.createPlaque(vehicleData);
+  }
+
+  async updatePlaque(id, plaqueData) {
+    return this.makeRequest(`/vehicles/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(vehicleData),
+      body: JSON.stringify(plaqueData),
     });
   }
 
-  async deleteVehicle(id) {
-    return await this.makeRequest(`/vehicles/${id}`, {
+  // Legacy method names for backward compatibility
+  async updateVehicle(id, vehicleData) {
+    return this.updatePlaque(id, vehicleData);
+  }
+
+  async deletePlaque(id) {
+    return this.makeRequest(`/vehicles/${id}`, {
       method: 'DELETE',
     });
   }
 
+  // Legacy method names for backward compatibility
+  async deleteVehicle(id) {
+    return this.deletePlaque(id);
+  }
+
+  async getPlaqueStats() {
+    return this.makeRequest('/vehicles/stats/overview');
+  }
+
+  // Legacy method names for backward compatibility
   async getVehicleStats() {
-    return await this.makeRequest('/vehicles/stats/overview');
+    return this.getPlaqueStats();
+  }
+
+  async getVehicles(params = {}) {
+    return this.getPlaques(params);
+  }
+
+  async getVehicleById(id) {
+    return this.getPlaqueById(id);
+  }
+
+  async getVehicleByPlateNumber(plateNumber) {
+    return this.getPlaqueByPlateNumber(plateNumber);
   }
 
   // Check if user is authenticated

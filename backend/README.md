@@ -1,102 +1,65 @@
-# Vehicle Registration System - Backend API
+# Système d'Enregistrement des Plaques - Backend API
 
-A comprehensive backend API for managing vehicle registrations with authentication, CRUD operations, and statistics.
+A comprehensive Node.js/Express backend API for the DRC Vehicle Registration System with SQLite database, JWT authentication, and full CRUD operations for plaque management.
 
-## Features
+## 🚀 Features
 
-- 🔐 **JWT Authentication** - Secure login/registration system
-- 🚗 **Vehicle Management** - Complete CRUD operations for vehicle registrations
+- 🔐 **JWT Authentication** - Secure user authentication with role-based access control
+- 🚗 **Plaque Management** - Complete CRUD operations for plaque registrations
 - 📊 **Statistics & Analytics** - Dashboard statistics and reporting
-- 🔍 **Advanced Search** - Search and filter vehicles by multiple criteria
-- 👥 **Role-based Access** - Admin and user role management
+- 🔍 **Search & Filtering** - Advanced search capabilities with pagination
+- 🛡️ **Security** - Password hashing, input validation, and CORS protection
 - 📱 **RESTful API** - Clean, well-documented API endpoints
-- 🗄️ **SQLite Database** - Lightweight, file-based database
-- ✅ **Input Validation** - Comprehensive request validation
-- 🔄 **Pagination** - Efficient data pagination for large datasets
+- 🗄️ **SQLite Database** - Lightweight, file-based database with migrations
 
-## Tech Stack
-
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: SQLite3
-- **Authentication**: JWT (JSON Web Tokens)
-- **Validation**: express-validator
-- **Password Hashing**: bcryptjs
-- **CORS**: cors middleware
-
-## Quick Start
-
-### Prerequisites
+## 📋 Prerequisites
 
 - Node.js (v14 or higher)
 - npm or yarn
 
-### Installation
+## 🛠️ Installation
 
-1. **Navigate to backend directory**:
+1. **Clone the repository**
    ```bash
-   cd backend
+   git clone <repository-url>
+   cd vehicle-registration-system/backend
    ```
 
-2. **Install dependencies**:
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-3. **Start the server**:
-   ```bash
-   # Development mode (with auto-restart)
-   npm run dev
+3. **Environment Configuration**
+   Create a `.env` file in the backend directory:
+   ```env
+   NODE_ENV=development
+   PORT=5000
+   JWT_SECRET=your-super-secret-jwt-key-here
+   DB_PATH=./database/plaques.db
+   ```
 
+4. **Start the server**
+   ```bash
+   # Development mode with auto-reload
+   npm run dev
+   
    # Production mode
    npm start
    ```
 
-4. **Server will start on port 5000**:
+5. **Verify installation**
+   The server will start and display:
    ```
-   🚗 Vehicle Registration System API running on port 5000
+   🚗 Plaque Registration System API running on port 5000
+   📊 Environment: development
+   🗄️  Database: ./database/plaques.db
+   🌐 CORS enabled for frontend on port 3000
    ```
 
-## Environment Configuration
-
-Create a `.env` file in the backend directory:
-
-```env
-PORT=5000
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
-DB_PATH=./database.sqlite
-NODE_ENV=development
-```
-
-## Default Admin Account
-
-The system creates a default admin account on first run:
-
-- **Email**: `admin@example.com`
-- **Password**: `password`
-
-⚠️ **Important**: Change the default password in production!
-
-## API Documentation
-
-### Base URL
-```
-http://localhost:5000/api
-```
+## 🔗 API Endpoints
 
 ### Authentication Endpoints
-
-#### Register User
-```http
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "username": "johndoe",
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
 
 #### Login User
 ```http
@@ -104,224 +67,257 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
-  "email": "john@example.com",
-  "password": "password123"
+  "email": "admin@example.com",
+  "password": "password"
 }
 ```
 
-**Response**:
-```json
+#### Register User
+```http
+POST /api/auth/register
+Content-Type: application/json
+
 {
-  "token": "jwt_token_here",
-  "user": {
-    "id": 1,
-    "username": "johndoe",
-    "email": "john@example.com",
-    "role": "user"
-  }
+  "username": "newuser",
+  "email": "user@example.com",
+  "password": "password123"
 }
 ```
 
 #### Get Current User
 ```http
 GET /api/auth/me
-Authorization: Bearer <jwt_token>
+Authorization: Bearer <jwt-token>
 ```
 
-### Vehicle Endpoints
+### Plaque Endpoints
 
-#### Get All Vehicles
+#### Get All Plaques
 ```http
 GET /api/vehicles?page=1&limit=10&search=ABC123&status=active
-Authorization: Bearer <jwt_token>
+Authorization: Bearer <jwt-token>
 ```
 
-**Query Parameters**:
-- `page` (optional): Page number for pagination
-- `limit` (optional): Items per page (default: 10)
-- `search` (optional): Search in plate number, owner name, make, model
+**Query Parameters:**
+- `page` (optional): Page number for pagination (default: 1)
+- `limit` (optional): Number of items per page (default: 10)
+- `search` (optional): Search term for plate number, owner, make, or model
 - `status` (optional): Filter by status (active, expired, suspended)
 
-#### Get Vehicle by ID
+#### Get Plaque by ID
 ```http
-GET /api/vehicles/1
-Authorization: Bearer <jwt_token>
+GET /api/vehicles/123
+Authorization: Bearer <jwt-token>
 ```
 
-#### Get Vehicle by Plate Number
+#### Get Plaque by Plate Number
 ```http
 GET /api/vehicles/plate/ABC123
-Authorization: Bearer <jwt_token>
+Authorization: Bearer <jwt-token>
 ```
 
-#### Register New Vehicle
+#### Register New Plaque
 ```http
 POST /api/vehicles
-Authorization: Bearer <jwt_token>
+Authorization: Bearer <jwt-token>
 Content-Type: application/json
 
 {
   "plateNumber": "ABC123",
   "ownerName": "John Doe",
   "ownerEmail": "john@example.com",
-  "ownerPhone": "+1234567890",
+  "ownerPhone": "+243123456789",
   "vehicleType": "Car",
   "vehicleMake": "Toyota",
   "vehicleModel": "Camry",
   "vehicleYear": 2023,
   "vehicleColor": "Blue",
-  "expiryDate": "2024-12-31T00:00:00Z"
+  "expiryDate": "2024-12-31T23:59:59.000Z"
 }
 ```
 
-#### Update Vehicle
+#### Update Plaque
 ```http
-PUT /api/vehicles/1
-Authorization: Bearer <jwt_token>
+PUT /api/vehicles/123
+Authorization: Bearer <jwt-token>
 Content-Type: application/json
 
 {
-  "status": "expired",
-  "expiryDate": "2025-12-31T00:00:00Z"
+  "status": "suspended",
+  "expiryDate": "2025-12-31T23:59:59.000Z"
 }
 ```
 
-#### Delete Vehicle (Admin Only)
+#### Delete Plaque (Admin Only)
 ```http
-DELETE /api/vehicles/1
-Authorization: Bearer <jwt_token>
+DELETE /api/vehicles/123
+Authorization: Bearer <jwt-token>
 ```
 
 #### Get Statistics
 ```http
 GET /api/vehicles/stats/overview
-Authorization: Bearer <jwt_token>
+Authorization: Bearer <jwt-token>
 ```
 
-**Response**:
+**Response:**
 ```json
 {
   "total": 150,
   "active": 120,
-  "expired": 25,
-  "suspended": 5,
-  "expiring_soon": 8
+  "expired": 20,
+  "suspended": 10,
+  "expiring_soon": 15
 }
 ```
 
-## Database Schema
+## 🗄️ Database Schema
 
 ### Users Table
-```sql
-CREATE TABLE users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
-  role TEXT DEFAULT 'user',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER PRIMARY KEY | Auto-incrementing user ID |
+| username | TEXT UNIQUE | Username |
+| email | TEXT UNIQUE | Email address |
+| password | TEXT | Hashed password |
+| role | TEXT | User role (user/admin) |
+| created_at | DATETIME | Creation timestamp |
+| updated_at | DATETIME | Last update timestamp |
+
+### Plaques Table
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER PRIMARY KEY | Auto-incrementing plaque ID |
+| plate_number | TEXT UNIQUE | Unique plate number |
+| owner_name | TEXT | Owner's full name |
+| owner_email | TEXT | Owner's email |
+| owner_phone | TEXT | Owner's phone number |
+| vehicle_type | TEXT | Type of vehicle |
+| vehicle_make | TEXT | Vehicle manufacturer |
+| vehicle_model | TEXT | Vehicle model |
+| vehicle_year | INTEGER | Manufacturing year |
+| vehicle_color | TEXT | Vehicle color |
+| registration_date | DATETIME | Registration date |
+| expiry_date | DATETIME | Expiration date |
+| status | TEXT | Status (active/expired/suspended) |
+| created_by | INTEGER | ID of user who created the record |
+| created_at | DATETIME | Creation timestamp |
+| updated_at | DATETIME | Last update timestamp |
+
+## 🔐 Authentication
+
+The API uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header:
+
+```http
+Authorization: Bearer <your-jwt-token>
 ```
 
-### Vehicles Table
-```sql
-CREATE TABLE vehicles (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  plate_number TEXT UNIQUE NOT NULL,
-  owner_name TEXT NOT NULL,
-  owner_email TEXT NOT NULL,
-  owner_phone TEXT NOT NULL,
-  vehicle_type TEXT NOT NULL,
-  vehicle_make TEXT NOT NULL,
-  vehicle_model TEXT NOT NULL,
-  vehicle_year INTEGER NOT NULL,
-  vehicle_color TEXT NOT NULL,
-  registration_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-  expiry_date DATETIME NOT NULL,
-  status TEXT DEFAULT 'active',
-  created_by INTEGER,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (created_by) REFERENCES users (id)
-);
+### Default Admin Account
+- **Email:** admin@example.com
+- **Password:** password
+- **Role:** admin
+
+## 🛡️ Security Features
+
+- **Password Hashing:** bcryptjs with salt rounds
+- **JWT Tokens:** Secure token-based authentication
+- **Input Validation:** express-validator for request validation
+- **CORS Protection:** Configured for frontend origin
+- **Role-based Access:** Admin-only endpoints protected
+- **SQL Injection Prevention:** Parameterized queries
+
+## 📁 Project Structure
+
+```
+backend/
+├── config.js              # Configuration settings
+├── server.js              # Main application file
+├── package.json           # Dependencies and scripts
+├── database/
+│   ├── database.js        # Database connection and setup
+│   └── plaques.db        # SQLite database file
+├── middleware/
+│   └── auth.js           # Authentication middleware
+├── routes/
+│   ├── auth.js           # Authentication routes
+│   └── plaques.js        # Plaque management routes
+└── README.md             # This file
 ```
 
-## Error Handling
+## 🧪 Testing
 
-The API uses standard HTTP status codes and returns JSON error responses:
+```bash
+# Run tests
+npm test
 
+# Run tests with coverage
+npm run test:coverage
+```
+
+## 🚀 Deployment
+
+### Environment Variables for Production
+```env
+NODE_ENV=production
+PORT=5000
+JWT_SECRET=your-super-secure-production-jwt-secret
+DB_PATH=/path/to/production/database/plaques.db
+```
+
+### PM2 Deployment
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Start the application
+pm2 start server.js --name "plaque-api"
+
+# Save PM2 configuration
+pm2 save
+pm2 startup
+```
+
+## 📝 API Response Format
+
+### Success Response
 ```json
 {
-  "message": "Error description",
+  "message": "Plaque registered successfully",
+  "plaque": {
+    "id": 123,
+    "plate_number": "ABC123",
+    "owner_name": "John Doe",
+    "status": "active",
+    "created_at": "2024-01-15T10:30:00.000Z"
+  }
+}
+```
+
+### Error Response
+```json
+{
+  "message": "Validation failed",
   "errors": [
     {
-      "field": "email",
-      "message": "Please provide a valid email"
+      "field": "plateNumber",
+      "message": "Plate number is required"
     }
   ]
 }
 ```
 
-### Common Status Codes
-- `200` - Success
-- `201` - Created successfully
-- `400` - Bad request / Validation error
-- `401` - Unauthorized / Invalid token
-- `403` - Forbidden / Insufficient permissions
-- `404` - Resource not found
-- `500` - Internal server error
-
-## Authentication
-
-The API uses JWT (JSON Web Tokens) for authentication. Include the token in requests:
-
-```http
-Authorization: Bearer <your_jwt_token>
-```
-
-Tokens expire after 24 hours and need to be refreshed by logging in again.
-
-## Development
-
-### Available Scripts
-
-```bash
-# Start development server with auto-reload
-npm run dev
-
-# Start production server
-npm start
-
-# Run tests
-npm test
-```
-
-### Project Structure
-
-```
-backend/
-├── config.js              # Configuration management
-├── server.js              # Main application file
-├── package.json           # Dependencies and scripts
-├── database/
-│   └── database.js        # Database setup and connection
-├── middleware/
-│   └── auth.js            # Authentication middleware
-├── routes/
-│   ├── auth.js            # Authentication routes
-│   └── vehicles.js        # Vehicle management routes
-└── README.md              # This file
-```
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For support and questions, please open an issue in the GitHub repository. 

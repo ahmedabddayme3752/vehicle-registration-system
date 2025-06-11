@@ -6,7 +6,7 @@ const database = require('./database/database');
 
 // Import routes
 const authRoutes = require('./routes/auth');
-const vehicleRoutes = require('./routes/vehicles');
+const plaqueRoutes = require('./routes/plaques');
 
 const app = express();
 
@@ -32,13 +32,13 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    service: 'Vehicle Registration System API'
+    service: 'Plaque Registration System API'
   });
 });
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/vehicles', plaqueRoutes);
 
 // 404 handler for API routes
 app.use('/api/*', (req, res) => {
@@ -62,7 +62,7 @@ async function startServer() {
     
     // Start server
     const server = app.listen(config.port, () => {
-      console.log(`🚗 Vehicle Registration System API running on port ${config.port}`);
+      console.log(`🚗 Plaque Registration System API running on port ${config.port}`);
       console.log(`📊 Environment: ${config.nodeEnv}`);
       console.log(`🗄️  Database: ${config.dbPath}`);
       console.log(`🌐 CORS enabled for frontend on port 3000`);
@@ -71,11 +71,11 @@ async function startServer() {
       console.log(`   POST /api/auth/login - User login`);
       console.log(`   POST /api/auth/register - User registration`);
       console.log(`   GET  /api/auth/me - Get current user`);
-      console.log(`   GET  /api/vehicles - Get all vehicles`);
-      console.log(`   POST /api/vehicles - Register new vehicle`);
-      console.log(`   GET  /api/vehicles/:id - Get vehicle by ID`);
-      console.log(`   PUT  /api/vehicles/:id - Update vehicle`);
-      console.log(`   DELETE /api/vehicles/:id - Delete vehicle (admin only)`);
+      console.log(`   GET  /api/vehicles - Get all plaques`);
+      console.log(`   POST /api/vehicles - Register new plaque`);
+      console.log(`   GET  /api/vehicles/:id - Get plaque by ID`);
+      console.log(`   PUT  /api/vehicles/:id - Update plaque`);
+      console.log(`   DELETE /api/vehicles/:id - Delete plaque (admin only)`);
       console.log(`   GET  /api/vehicles/stats/overview - Get statistics`);
       console.log(`\n📝 Default admin credentials:`);
       console.log(`   Email: admin@example.com`);
