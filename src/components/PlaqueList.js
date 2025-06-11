@@ -1,3 +1,23 @@
+/**
+ * PlaqueList Component - Plaque Management Interface
+ * 
+ * This component provides a comprehensive interface for viewing, searching,
+ * and managing plaque registrations. It includes pagination, filtering,
+ * and administrative functions.
+ * 
+ * Features:
+ * - Paginated plaque listing with search functionality
+ * - Status-based filtering (all, active, expired, suspended)
+ * - Expiration warnings for plaques expiring within 30 days
+ * - Admin-only delete functionality with confirmation
+ * - Responsive table design with Bootstrap
+ * - Empty state handling
+ * 
+ * @author Ahmed
+ * @version 1.0.0
+ * @since 2024
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
@@ -6,6 +26,14 @@ import {
 } from 'react-bootstrap';
 import ApiService from '../services/api';
 
+/**
+ * PlaqueList Functional Component
+ * 
+ * Main component for displaying and managing the list of registered plaques.
+ * Provides search, filter, pagination, and administrative functions.
+ * 
+ * @returns {JSX.Element} The rendered PlaqueList component
+ */
 const PlaqueList = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);

@@ -1,8 +1,35 @@
+/**
+ * Dashboard Component - Main Application Dashboard
+ * 
+ * This component serves as the main dashboard for the plaque registration system.
+ * It displays key statistics, recent registrations, and provides navigation
+ * to other parts of the application.
+ * 
+ * Features:
+ * - Real-time statistics display (total, active, expired, expiring soon)
+ * - Recent plaques table with status indicators
+ * - User profile information with role-based features
+ * - Quick action buttons for common tasks
+ * - Responsive design with Bootstrap components
+ * 
+ * @author Ahmed
+ * @version 1.0.0
+ * @since 2024
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Container, Nav, Navbar, NavDropdown, Button, Row, Col, Card, Table, Alert, Spinner } from 'react-bootstrap';
 import ApiService from '../services/api';
 
+/**
+ * Dashboard Functional Component
+ * 
+ * Main dashboard component that displays system overview and statistics.
+ * Requires user authentication to access.
+ * 
+ * @returns {JSX.Element} The rendered Dashboard component
+ */
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
@@ -11,6 +38,10 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  /**
+   * Component initialization effect
+   * Handles authentication check and data loading
+   */
   useEffect(() => {
     // Check authentication
     if (!ApiService.isAuthenticated()) {

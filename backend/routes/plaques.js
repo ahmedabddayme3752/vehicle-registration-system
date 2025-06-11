@@ -1,29 +1,65 @@
+/**
+ * Plaque Routes - API Endpoints for Plaque Management
+ * 
+ * This module defines all API endpoints related to plaque registration
+ * and management in the system. It provides CRUD operations, search,
+ * filtering, pagination, and statistics functionality.
+ * 
+ * Endpoints:
+ * - GET /api/plaques - List plaques with pagination and filtering
+ * - GET /api/plaques/:id - Get specific plaque by ID
+ * - GET /api/plaques/plate/:plateNumber - Get plaque by plate number
+ * - POST /api/plaques - Create new plaque registration
+ * - PUT /api/plaques/:id - Update existing plaque
+ * - DELETE /api/plaques/:id - Delete plaque (admin only)
+ * - GET /api/plaques/stats/overview - Get system statistics
+ * 
+ * @author Ahmed
+ * @version 1.0.0
+ * @since 2024
+ */
+
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const database = require('../database/database');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
-// @route   GET /api/plaques
-// @desc    Get all plaques
-// @access  Private
+// ==================== ROUTE HANDLERS ====================
+
+/**
+ * GET /api/plaques
+ * Get list of plaques with pagination, search, and filtering
+ * 
+ * Query Parameters:
+ * - page: Page number (default: 1)
+ * - limit: Items per page (default: 10)
+ * - search: Search term for plate number, owner name, email
+ * - status: Filter by status (active, expired, suspended)
+ * 
+ * @route GET /api/plaques
+ * @access Private
+ */
 router.get('/', authMiddleware, async (req, res) => {
   try {
+    // Parse query parameters with defaults
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const search = req.query.search || '';
     const status = req.query.status || '';
 
+    // Build dynamic WHERE clause for filtering
     let whereClause = '';
     let params = [];
 
-    // Build search conditions
+    // Add search functionality
     if (search) {
       whereClause += ' WHERE (plate_number LIKE ? OR owner_name LIKE ? OR owner_email LIKE ?)';
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
 
+    // Add status filter
     if (status) {
       whereClause += search ? ' AND status = ?' : ' WHERE status = ?';
       params.push(status);
@@ -31,7 +67,7 @@ router.get('/', authMiddleware, async (req, res) => {
 
     const db = database.getDb();
 
-    // Get total count
+    // Get total count for pagination
     const countQuery = `SELECT COUNT(*) as total FROM plaques${whereClause}`;
     const totalResult = await new Promise((resolve, reject) => {
       db.get(countQuery, params, (err, row) => {
@@ -40,7 +76,7 @@ router.get('/', authMiddleware, async (req, res) => {
       });
     });
 
-    // Get plaques
+    // Get paginated plaque data
     const query = `
       SELECT id, plate_number, owner_name, owner_email, owner_phone,
              registration_date, expiry_date, status, created_at
@@ -71,9 +107,13 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-// @route   GET /api/plaques/:id
-// @desc    Get plaque by ID
-// @access  Private
+/**
+ * GET /api/plaques/:id
+ * Get specific plaque by ID
+ * 
+ * @route GET /api/plaques/:id
+ * @access Private
+ */
 router.get('/:id', authMiddleware, (req, res) => {
   const db = database.getDb();
   const { id } = req.params;
@@ -92,9 +132,13 @@ router.get('/:id', authMiddleware, (req, res) => {
   });
 });
 
-// @route   GET /api/plaques/plate/:plateNumber
-// @desc    Get plaque by plate number
-// @access  Private
+/**
+ * GET /api/plaques/plate/:plateNumber
+ * Get specific plaque by plate number
+ * 
+ * @route GET /api/plaques/plate/:plateNumber
+ * @access Private
+ */
 router.get('/plate/:plateNumber', authMiddleware, (req, res) => {
   const db = database.getDb();
   const { plateNumber } = req.params;
@@ -113,9 +157,22 @@ router.get('/plate/:plateNumber', authMiddleware, (req, res) => {
   });
 });
 
-// @route   POST /api/plaques
-// @desc    Register a new plaque
-// @access  Private
+/**
+ * POST /api/plaques
+ * Create new plaque registration
+ * 
+ * Required fields:
+ * - plateNumber: Unique plate identifier
+ * - ownerName: Full name of the owner
+ * - ownerEmail: Owner's email address
+ * 
+ * Optional fields:
+ * - ownerPhone: Owner's phone number
+ * - expiryDate: Registration expiry date (defaults to 1 year from now)
+ * 
+ * @route POST /api/plaques
+ * @access Private
+ */
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { plateNumber, ownerName, ownerEmail, ownerPhone, expiryDate } = req.body;
@@ -147,7 +204,7 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
 
-    // Insert new plaque
+    // Insert new plaque with default values
     const result = await new Promise((resolve, reject) => {
       db.run(
         `INSERT INTO plaques (
@@ -188,9 +245,13 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// @route   PUT /api/plaques/:id
-// @desc    Update plaque
-// @access  Private
+/**
+ * PUT /api/plaques/:id
+ * Update existing plaque registration
+ * 
+ * @route PUT /api/plaques/:id
+ * @access Private
+ */
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;

@@ -1,50 +1,99 @@
+/**
+ * AddPlate Component - Person Registration Form
+ * 
+ * This component handles the registration of new persons in the system.
+ * It collects personal information, generates plate numbers, and creates
+ * QR codes containing all registration data.
+ * 
+ * Features:
+ * - Personal information form with validation
+ * - Automatic plate number generation (6-digit format)
+ * - QR code generation with complete data
+ * - Edit mode for updating existing registrations
+ * - Form validation and error handling
+ * 
+ * @author Ahmed
+ * @version 1.0.0
+ * @since 2024
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Container, Form, Button, Row, Col, Navbar, Nav, NavDropdown, Alert, Spinner, Modal } from 'react-bootstrap';
 import { QRCodeSVG } from 'qrcode.react';
 import ApiService from '../services/api';
 
+/**
+ * AddPlate Functional Component
+ * 
+ * Main component for person registration and plate generation.
+ * Handles both new registrations and editing existing records.
+ * 
+ * @returns {JSX.Element} The rendered AddPlate component
+ */
 const AddPlate = () => {
+  // ==================== HOOKS AND STATE MANAGEMENT ====================
+  
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Loading and error states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showQR, setShowQR] = useState(false);
 
-  // Check if we're in edit mode
+  // Edit mode detection from navigation state
   const editMode = location.state?.editMode || false;
   const existingPlaque = location.state?.plaqueData || null;
 
+  /**
+   * Form data state object
+   * Contains all personal information fields for registration
+   */
   const [formData, setFormData] = useState({
-    nom: '',
-    postNom: '',
-    prenom: '',
-    district: '',
-    territoire: '',
-    secteur: '',
-    village: '',
-    province: '',
-    provinceCode: '10',
-    nationalite: '',
-    adresse: '',
-    telephone: '',
-    email: ''
+    // Personal identification
+    nom: '',                    // Last name
+    postNom: '',               // Middle name
+    prenom: '',                // First name
+    
+    // Location information
+    district: '',              // Administrative district
+    territoire: '',            // Territory
+    secteur: '',              // Sector
+    village: '',              // Village
+    province: '',             // Province name
+    provinceCode: '10',       // Province code (default: Kongo Central)
+    
+    // Contact and personal details
+    nationalite: '',          // Nationality
+    adresse: '',              // Physical address
+    telephone: '',            // Phone number
+    email: ''                 // Email address
   });
   
+  // Plate number and QR code states
   const [plateNumber, setPlateNumber] = useState('');
   const [qrCodeValue, setQrCodeValue] = useState('');
 
+  // ==================== COMPONENT LIFECYCLE ====================
+
+  /**
+   * Component initialization effect
+   * Handles authentication check and edit mode setup
+   */
   useEffect(() => {
-    // Check authentication
+    // Redirect to login if not authenticated
     if (!ApiService.isAuthenticated()) {
       navigate('/');
       return;
     }
 
-    // If in edit mode, pre-fill the form with existing data
+    // Pre-fill form in edit mode
     if (editMode && existingPlaque) {
+      // Parse owner name into components (assuming "Last Middle First" format)
       const ownerNameParts = existingPlaque.owner_name?.split(' ') || ['', '', ''];
+      
       setFormData({
         nom: ownerNameParts[0] || '',
         postNom: ownerNameParts[1] || '',
@@ -64,6 +113,14 @@ const AddPlate = () => {
     }
   }, [navigate, editMode, existingPlaque]);
 
+  // ==================== EVENT HANDLERS ====================
+
+  /**
+   * Handle form input changes
+   * Updates the corresponding field in formData state
+   * 
+   * @param {Event} e - Input change event
+   */
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -72,6 +129,11 @@ const AddPlate = () => {
     });
   };
 
+  /**
+   * Generate random plate number
+   * Creates a simple 6-digit plate number (e.g., "123456")
+   * Resets QR code when new plate is generated
+   */
   const handleGeneratePlate = () => {
     // Generate simple number like the old format
     const randomNum = Math.floor(Math.random() * 900000) + 100000; // 6 digits
@@ -80,6 +142,17 @@ const AddPlate = () => {
     setQrCodeValue('');
   };
 
+  /**
+   * Generate QR code and submit registration
+   * 
+   * This function:
+   * 1. Validates that all required fields are completed
+   * 2. Creates complete data object for QR code
+   * 3. Submits registration to backend API
+   * 4. Generates QR code with all form data
+   * 
+   * @async
+   */
   const handleGenerateQR = async () => {
     if (plateNumber && isFormComplete()) {
       // Complete data for QR code (includes all form fields)
@@ -136,7 +209,13 @@ const AddPlate = () => {
     }
   };
 
-  // Check if all form fields are filled
+  // ==================== UTILITY FUNCTIONS ====================
+
+  /**
+   * Check if all required form fields are completed
+   * 
+   * @returns {boolean} True if all required fields have values
+   */
   const isFormComplete = () => {
     const requiredFields = [
       'nom', 'postNom', 'prenom', 'district', 'territoire', 
@@ -147,24 +226,39 @@ const AddPlate = () => {
     return requiredFields.every(field => formData[field] && formData[field].trim() !== '') && plateNumber;
   };
 
+  /**
+   * Show QR code in modal
+   */
   const handleShowQR = () => {
     setShowQR(true);
   };
 
+  /**
+   * Hide QR code modal
+   */
   const handleCloseQR = () => {
     setShowQR(false);
   };
 
+  /**
+   * Handle user logout
+   */
   const handleLogout = () => {
     ApiService.logout();
   };
 
+  /**
+   * Navigate back to dashboard
+   */
   const handleBack = () => {
     navigate('/dashboard');
   };
 
+  // ==================== COMPONENT RENDER ====================
+
   return (
     <Container className="app-container p-0">
+      {/* Application Header */}
       <div className="app-header py-2">
         <h5 className="app-title">App NEW TEC DRC</h5>
         <div className="header-content">
@@ -180,6 +274,7 @@ const AddPlate = () => {
         </div>
       </div>
 
+      {/* Navigation Menu */}
       <div className="mb-4"></div>
       <Navbar expand="lg" className="nav-menu">
         <Container>
@@ -205,11 +300,15 @@ const AddPlate = () => {
         </Container>
       </Navbar>
 
+      {/* Main Form Container */}
       <div className="form-container">
+        {/* Status Messages */}
         {error && <Alert variant="danger">{error}</Alert>}
         {success && <Alert variant="success">{success}</Alert>}
 
+        {/* Person Registration Form */}
         <Form>
+          {/* Personal Name Fields */}
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
               <Form.Label>Nom</Form.Label>
@@ -258,6 +357,7 @@ const AddPlate = () => {
             </Col>
           </Row>
 
+          {/* Location Information Fields */}
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
               <Form.Label>District</Form.Label>
@@ -358,6 +458,7 @@ const AddPlate = () => {
             </Col>
           </Row>
 
+          {/* Province Code Selection - All 26 DRC Provinces */}
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
               <Form.Label>Code Province</Form.Label>
@@ -400,6 +501,7 @@ const AddPlate = () => {
             </Col>
           </Row>
 
+          {/* Personal Details */}
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
               <Form.Label>Nationalité</Form.Label>
@@ -435,6 +537,7 @@ const AddPlate = () => {
             </Col>
           </Row>
 
+          {/* Contact Information */}
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
               <Form.Label>Téléphone</Form.Label>
@@ -467,6 +570,7 @@ const AddPlate = () => {
             </Col>
           </Row>
 
+          {/* Plate Number Generation and QR Code Section */}
           <Row className="mb-3">
             <Col xs={3} className="text-end pt-2">
               <Form.Label>Numéro de plaque</Form.Label>
@@ -500,6 +604,7 @@ const AddPlate = () => {
             </Col>
           </Row>
 
+          {/* Display Generated Plate Number and QR Code */}
           {plateNumber && (
             <Row className="mb-3">
               <Col xs={{span: 4, offset: 3}}>
@@ -532,7 +637,7 @@ const AddPlate = () => {
         </Form>
       </div>
 
-      {/* QR Code Modal */}
+      {/* QR Code Modal for Enlarged View */}
       <Modal show={showQR} onHide={handleCloseQR} centered>
         <Modal.Header closeButton>
           <Modal.Title>Code QR - {plateNumber}</Modal.Title>
@@ -566,6 +671,7 @@ const AddPlate = () => {
         </Modal.Footer>
       </Modal>
 
+      {/* Application Footer */}
       <div className="text-center mb-3">
         <img 
           src="https://www.gov.cd/assets/img/armoiries.png" 

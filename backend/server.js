@@ -1,3 +1,22 @@
+/**
+ * Main Server Application - Plaque Registration System Backend
+ * 
+ * This is the main entry point for the backend API server of the
+ * Plaque Registration System for the Democratic Republic of Congo.
+ * 
+ * The server provides:
+ * - RESTful API endpoints for plaque management
+ * - User authentication and authorization
+ * - SQLite database integration
+ * - CORS support for frontend integration
+ * - Request logging and error handling
+ * - Health check endpoints
+ * 
+ * @author Ahmed
+ * @version 1.0.0
+ * @since 2024
+ */
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
